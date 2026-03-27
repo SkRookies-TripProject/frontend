@@ -10,19 +10,21 @@
 - Axios
 - React Router DOM
 
-
 ## 📂 프로젝트 구조
+
+```
 src
-├ api // axios, API 요청 관리
-├ assets // 이미지, 아이콘
-├ components // 공통 UI 컴포넌트
-├ pages // 페이지 단위 컴포넌트
-├ hooks // 커스텀 훅
-├ utils // 공통 함수
-├ styles // 전역 스타일
-├ router // 라우팅 설정
+├ api          // axios, API 요청 관리
+├ assets       // 이미지, 아이콘
+├ components   // 공통 UI 컴포넌트
+├ pages        // 페이지 단위 컴포넌트
+├ hooks        // 커스텀 훅
+├ utils        // 공통 함수
+├ styles       // 전역 스타일
+├ router       // 라우팅 설정
 ├ App.jsx
 └ main.jsx
+```
 
 ## 🚀 실행 방법
 npm install
