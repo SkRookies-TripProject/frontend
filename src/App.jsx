@@ -500,7 +500,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   );
 }
 
-// ─── 화면 7: 통계 ────────────────────────────────────────────────────────────
+// ─── 화면 7: 통계 test ────────────────────────────────────────────────────────────
 
 function StatsScreen({ onNavigate }) {
   const stats = [
