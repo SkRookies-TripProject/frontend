@@ -670,38 +670,70 @@ body {
 
 /* ─── 홈 ────────────────────────────────────────────────────────────────────── */
 
-.home-screen { padding: 16px; gap: 16px; }
+.home-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 14px 14px;
+  gap: 0;
+}
 
 .home-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 0;
+  padding: 14px 0 10px;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
-.hamburger, .filter-icon {
-  font-size: 20px;
-  cursor: pointer;
-  color: var(--gray-600);
+/* ── 유저 배너 ── */
+.home-banner {
+  background: var(--green);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
 }
 
+.home-banner-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.home-banner-sub {
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+}
+
+/* ── 카드 그리드 ── */
 .trip-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   flex: 1;
+  overflow-y: auto;
+  padding-bottom: 12px;
+  /* 스크롤바 숨김 */
+  scrollbar-width: none;
+  align-content: start;  /* 카드가 적어도 위에서부터 채움 */
 }
+.trip-grid::-webkit-scrollbar { display: none; }
 
+/* ── 카드 ── */
 .trip-card {
   background: var(--gray-50);
   border-radius: 12px;
-  padding: 12px;
+  overflow: hidden;
   cursor: pointer;
   border: 1.5px solid var(--gray-200);
   transition: border-color 0.2s, box-shadow 0.2s;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  /* 카드 전체 높이 고정 */
+  height: 190px;
 }
 
 .trip-card:hover {
@@ -709,19 +741,45 @@ body {
   box-shadow: 0 2px 12px rgba(62,207,142,0.15);
 }
 
-.trip-card-img {
-  width: 100%;
-  height: 80px;
+/* 썸네일 — 남은 공간 채우되 넘치지 않음 */
+.trip-card-thumb {
+  flex: 1;
+  min-height: 0;
   background: var(--gray-200);
-  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  overflow: hidden;
 }
 
-.trip-card-name { font-size: 13px; font-weight: 600; color: var(--gray-800); }
+.trip-card-flag {
+  font-size: 42px;
+  line-height: 1;
+}
+
+/* 텍스트 영역 — 고정 높이 */
+.trip-card-body {
+  flex-shrink: 0;
+  padding: 8px 10px 10px;
+}
+
+.trip-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .trip-card-budget { font-size: 11px; color: var(--gray-400); }
+
+.hamburger, .filter-icon {
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--gray-600);
+}
 
 /* ─── 여행 상세 ─────────────────────────────────────────────────────────────── */
 

@@ -16,8 +16,8 @@ function GreenButton({ children, onClick, fullWidth }) {
 
 // ─── 화면 1: 로그인 ──────────────────────────────────────────────────────────
 
-function LoginScreen({ onNavigate }) {
-  const [id, setId] = useState("");
+function LoginScreen({ onNavigate, onLogin }) {
+  const [name, setName] = useState("");
   const [pw, setPw] = useState("");
   return (
     <div className="screen login-screen">
@@ -28,9 +28,9 @@ function LoginScreen({ onNavigate }) {
       <div className="form-group">
         <input
           className="input-field"
-          placeholder="아이디 입력"
-          value={id}
-          onChange={(e) => setId(e.target.value)}
+          placeholder="이름 입력"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
         <input
           className="input-field"
@@ -41,8 +41,10 @@ function LoginScreen({ onNavigate }) {
         />
         <p className="find-link">8자 이상 입력하세요</p>
       </div>
-      {/* 로그인 완료 시 "afterLogin" 이벤트 발생 → App에서 trips 유무 체크 */}
-      <GreenButton fullWidth onClick={() => onNavigate("afterLogin")}>
+      <GreenButton fullWidth onClick={() => {
+        onLogin(name.trim() || "관리자");
+        onNavigate("afterLogin");
+      }}>
         로그인
       </GreenButton>
       <p className="sub-link">
@@ -57,22 +59,38 @@ function LoginScreen({ onNavigate }) {
 
 // ─── 화면 2: 회원가입 ────────────────────────────────────────────────────────
 
-function RegisterScreen({ onNavigate }) {
+function RegisterScreen({ onNavigate, onLogin }) {
+  const [fields, setFields] = useState({ name: "", email: "", id: "", pw: "", pw2: "" });
+  const placeholders = ["사용자 이름", "이메일 입력", "아이디 입력", "비밀번호 입력"];
+  const keys = ["name", "email", "id", "pw"];
   return (
     <div className="screen register-screen">
       <h1 className="register-title">회원가입</h1>
       <div className="form-group">
-        {["사용자 이름", "이메일 입력", "아이디 입력", "비밀번호 입력"].map(
-          (ph) => (
-            <input key={ph} className="input-field" placeholder={ph} />
-          )
-        )}
+        {keys.map((k, i) => (
+          <input
+            key={k}
+            className="input-field"
+            placeholder={placeholders[i]}
+            type={k === "pw" ? "password" : "text"}
+            value={fields[k]}
+            onChange={(e) => setFields((f) => ({ ...f, [k]: e.target.value }))}
+          />
+        ))}
         <p className="find-link">8자 이상 입력하세요</p>
-        <input className="input-field" placeholder="비밀번호 재입력" />
+        <input
+          className="input-field"
+          placeholder="비밀번호 재입력"
+          type="password"
+          value={fields.pw2}
+          onChange={(e) => setFields((f) => ({ ...f, pw2: e.target.value }))}
+        />
         <p className="find-link">비밀번호를 확인하세요</p>
       </div>
-      {/* 회원가입 완료 시도 "afterLogin" 이벤트 발생 → 신규 유저이므로 항상 온보딩으로 감 */}
-      <GreenButton fullWidth onClick={() => onNavigate("afterLogin")}>
+      <GreenButton fullWidth onClick={() => {
+        onLogin(fields.name.trim() || "관리자");
+        onNavigate("afterLogin");
+      }}>
         회원가입/로그인
       </GreenButton>
       <p className="sub-link">
@@ -139,7 +157,7 @@ const COUNTRIES = [
 
 function CreateTripScreen({ onNavigate, onAddTrip }) {
   const [tripName, setTripName] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[1]); // 미국 기본값
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]); // 한국 기본값
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [budget, setBudget] = useState("");
@@ -248,14 +266,22 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
 
 // ─── 화면 5: 홈(여행 목록) ───────────────────────────────────────────────────
 
-function HomeScreen({ trips, onNavigate, onSelectTrip }) {
+function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
   return (
     <div className="screen home-screen">
+      {/* 상단 아이콘 헤더 */}
       <div className="home-header">
         <span className="filter-icon" onClick={() => onNavigate("tripFilter")}>⊟</span>
         <span className="hamburger">☰</span>
       </div>
 
+      {/* ✈ 유저 배너 */}
+      <div className="home-banner">
+        <div className="home-banner-title">✈ {userName} 님의 여행기록</div>
+        <div className="home-banner-sub">지금까지의 여행을 한눈에 확인해보세요</div>
+      </div>
+
+      {/* 여행 카드 그리드 */}
       <div className="trip-grid">
         {trips.map((t) => (
           <div
@@ -266,11 +292,11 @@ function HomeScreen({ trips, onNavigate, onSelectTrip }) {
               onNavigate("tripDetail");
             }}
           >
-            {/* 국기 썸네일 영역 */}
+            {/* 국기 썸네일 — 고정 높이 */}
             <div className="trip-card-thumb">
               <span className="trip-card-flag">{t.flag}</span>
             </div>
-            {/* 텍스트 영역 */}
+            {/* 텍스트 */}
             <div className="trip-card-body">
               <div className="trip-card-name">{t.name}</div>
               <div className="trip-card-budget">{t.budget}</div>
@@ -604,20 +630,21 @@ function ExpenseListScreen({ onNavigate }) {
 
 export default function App() {
   const [screen, setScreen] = useState("login");
-  // trips 상태를 최상위에서 관리
   const [trips, setTrips] = useState([]);
-  // 현재 선택된 여행 ID
   const [selectedTripId, setSelectedTripId] = useState(null);
-  // 이전 화면 기록 (뒤로가기용)
   const [prevScreen, setPrevScreen] = useState("home");
+  // 로그인한 유저 이름 (미로그인 시 "관리자")
+  const [userName, setUserName] = useState("관리자");
+
+  const handleLogin = (name) => {
+    setUserName(name || "관리자");
+  };
 
   const navigate = (dest) => {
-    // 로그인/회원가입 완료 후 trips 유무에 따라 분기
     if (dest === "afterLogin") {
       setScreen(trips.length === 0 ? "onboarding" : "home");
       return;
     }
-    // 뒤로가기
     if (dest === "back") {
       setScreen(prevScreen);
       return;
@@ -626,16 +653,11 @@ export default function App() {
     setScreen(dest);
   };
 
-  // CreateTripScreen에서 호출 — 새 여행 추가 후 홈으로 이동
   const handleAddTrip = (newTrip) => {
-    setTrips((prev) => [
-      ...prev,
-      { id: Date.now(), ...newTrip },
-    ]);
+    setTrips((prev) => [...prev, { id: Date.now(), ...newTrip }]);
     setScreen("home");
   };
 
-  // TripDetailScreen 수정 모드에서 저장 시 호출
   const handleUpdateTrip = (updatedTrip) => {
     setTrips((prev) =>
       prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
@@ -644,18 +666,24 @@ export default function App() {
 
   const renderScreen = () => {
     const selectedTrip = trips.find((t) => t.id === selectedTripId) || null;
-
     switch (screen) {
       case "login":
-        return <LoginScreen onNavigate={navigate} />;
+        return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
       case "register":
-        return <RegisterScreen onNavigate={navigate} />;
+        return <RegisterScreen onNavigate={navigate} onLogin={handleLogin} />;
       case "onboarding":
         return <OnboardingScreen onNavigate={navigate} />;
       case "createTrip":
         return <CreateTripScreen onNavigate={navigate} onAddTrip={handleAddTrip} />;
       case "home":
-        return <HomeScreen trips={trips} onNavigate={navigate} onSelectTrip={setSelectedTripId} />;
+        return (
+          <HomeScreen
+            trips={trips}
+            onNavigate={navigate}
+            onSelectTrip={setSelectedTripId}
+            userName={userName}
+          />
+        );
       case "tripDetail":
         return <TripDetailScreen onNavigate={navigate} trip={selectedTrip} onUpdateTrip={handleUpdateTrip} />;
       case "stats":
@@ -663,7 +691,7 @@ export default function App() {
       case "expenseList":
         return <ExpenseListScreen onNavigate={navigate} />;
       default:
-        return <LoginScreen onNavigate={navigate} />;
+        return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
     }
   };
 
