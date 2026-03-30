@@ -723,6 +723,207 @@ body {
 .trip-card-name { font-size: 13px; font-weight: 600; color: var(--gray-800); }
 .trip-card-budget { font-size: 11px; color: var(--gray-400); }
 
+.trip-review-link {
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Noto Sans KR', sans-serif;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.trip-review-plus {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(62, 207, 142, 0.45);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.trip-journal-screen {
+  padding: 12px 14px 16px;
+  gap: 14px;
+}
+
+.journal-shell {
+  background: #fff;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 10px 20px rgba(17, 24, 39, 0.08);
+  overflow: hidden;
+}
+
+.journal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+}
+
+.journal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.journal-days {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  padding: 0 12px 12px;
+}
+
+.journal-day-btn {
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--gray-700);
+}
+
+.journal-day-btn.active {
+  background: var(--green-light);
+  color: var(--green-dark);
+}
+
+.journal-day-label {
+  font-size: 12px;
+}
+
+.journal-day-date {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.journal-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.journal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.journal-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.journal-textarea {
+  width: 100%;
+  min-height: 170px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 14px;
+  background: var(--gray-50);
+  padding: 14px;
+  resize: none;
+  outline: none;
+  font-size: 13px;
+  line-height: 1.6;
+  font-family: 'Noto Sans KR', sans-serif;
+  color: var(--gray-700);
+}
+
+.journal-textarea:focus {
+  border-color: var(--green);
+  background: #fff;
+}
+
+.journal-textarea-small {
+  min-height: 120px;
+}
+
+.journal-image-box {
+  /* 후기 이미지 업로드 영역의 기본 박스 */
+  width: 100%;
+  min-height: 170px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 14px;
+  background: var(--gray-50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.journal-image-input {
+  display: none;
+}
+
+.journal-image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--gray-400);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.journal-image-plus {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(62, 207, 142, 0.45);
+  color: var(--green);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+  background: #fff;
+}
+
+.journal-image-preview-wrap {
+  /* 업로드 후 이미지를 박스 전체에 맞춰 보여주는 래퍼 */
+  width: 100%;
+  height: 100%;
+  min-height: 170px;
+  position: relative;
+}
+
+.journal-image-preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 170px;
+  object-fit: cover;
+}
+
+.journal-image-change {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.72);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 /* ─── 여행 상세 ─────────────────────────────────────────────────────────────── */
 
 .trip-detail-screen { padding: 0; gap: 0; }

@@ -274,6 +274,18 @@ function HomeScreen({ trips, onNavigate, onSelectTrip }) {
             <div className="trip-card-body">
               <div className="trip-card-name">{t.name}</div>
               <div className="trip-card-budget">{t.budget}</div>
+              {/* 카드 클릭과 별도로 후기 기록 화면으로 이동하는 버튼 */}
+              <button
+                className="trip-review-link"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectTrip(t.id);
+                  onNavigate("tripJournal");
+                }}
+              >
+                <span className="trip-review-plus">+</span>
+                <span>후기작성</span>
+              </button>
             </div>
           </div>
         ))}
@@ -282,6 +294,114 @@ function HomeScreen({ trips, onNavigate, onSelectTrip }) {
       <GreenButton fullWidth onClick={() => onNavigate("createTrip")}>
         여행 기록하기
       </GreenButton>
+    </div>
+  );
+}
+
+function TripJournalScreen({ onNavigate, trip }) {
+  const [selectedDay, setSelectedDay] = useState(0);
+  // 업로드한 후기 이미지를 파일 정보와 미리보기 URL 형태로 저장
+  const [reviewImage, setReviewImage] = useState(null);
+  const [memo, setMemo] = useState("");
+
+  if (!trip) {
+    return (
+      <div className="screen trip-journal-screen">
+        <div className="journal-shell">
+          <div className="journal-header">
+            <span className="filter-icon" onClick={() => onNavigate("home")}>⌂</span>
+            <span className="journal-title">여행을 먼저 선택해주세요</span>
+            <span className="hamburger">☰</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const tripDays = [
+    { label: "월", date: 30 },
+    { label: "화", date: 31 },
+    { label: "수", date: 1 },
+    { label: "목", date: 2 },
+  ];
+
+  const handleReviewImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 선택 직후 바로 화면에 보이도록 브라우저 미리보기 URL 생성
+    setReviewImage({
+      file,
+      preview: URL.createObjectURL(file),
+    });
+  };
+
+  return (
+    <div className="screen trip-journal-screen">
+      <div className="journal-shell">
+        <div className="journal-header">
+          <span className="filter-icon" onClick={() => onNavigate("home")}>⌂</span>
+          <span className="journal-title">{trip.name}(후기)</span>
+          <span className="hamburger">☰</span>
+        </div>
+
+        <div className="journal-days">
+          {tripDays.map((day, index) => (
+            <button
+              key={`${day.label}-${day.date}`}
+              className={`journal-day-btn${selectedDay === index ? " active" : ""}`}
+              onClick={() => setSelectedDay(index)}
+            >
+              <span className="journal-day-label">{day.label}</span>
+              <span className="journal-day-date">{day.date}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="journal-content">
+        <div className="journal-field">
+          <label className="journal-label">이미지</label>
+          {/* label을 클릭하면 숨겨진 file input이 열리도록 구성 */}
+          <label className="journal-image-box">
+            <input
+              className="journal-image-input"
+              type="file"
+              accept="image/*"
+              onChange={handleReviewImageChange}
+            />
+            {reviewImage ? (
+              // 이미지가 있으면 업로드 영역 대신 미리보기를 표시
+              <div className="journal-image-preview-wrap">
+                <img
+                  src={reviewImage.preview}
+                  alt="후기 이미지 미리보기"
+                  className="journal-image-preview"
+                />
+                <span className="journal-image-change">+ 이미지 변경</span>
+              </div>
+            ) : (
+              // 처음 상태에서는 이미지 추가 안내 UI를 노출
+              <div className="journal-image-placeholder">
+                <span className="journal-image-plus">+</span>
+                <span>이미지 추가</span>
+              </div>
+            )}
+          </label>
+        </div>
+
+        <div className="journal-field">
+          <label className="journal-label">메모</label>
+          <textarea
+            className="journal-textarea journal-textarea-small"
+            placeholder="다음에 참고할 메모를 남겨보세요."
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <GreenButton fullWidth>기록하기</GreenButton>
     </div>
   );
 }
@@ -658,6 +778,8 @@ export default function App() {
         return <HomeScreen trips={trips} onNavigate={navigate} onSelectTrip={setSelectedTripId} />;
       case "tripDetail":
         return <TripDetailScreen onNavigate={navigate} trip={selectedTrip} onUpdateTrip={handleUpdateTrip} />;
+      case "tripJournal":
+        return <TripJournalScreen onNavigate={navigate} trip={selectedTrip} />;
       case "stats":
         return <StatsScreen onNavigate={navigate} />;
       case "expenseList":
