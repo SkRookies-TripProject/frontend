@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./App.css";
+import "./app.css";
 
 // ─── 공통 컴포넌트 ───────────────────────────────────────────────────────────
 
@@ -657,7 +657,13 @@ export default function App() {
       case "tripDetail":
         return <TripDetailScreen onNavigate={navigate} trip={selectedTrip} onUpdateTrip={handleUpdateTrip} />;
       case "stats":
-        return <StatsScreen onNavigate={navigate} />;
+      return (
+        <StatsScreen
+          onNavigate={navigate}
+          trip={selectedTrip}
+          expenses={DUMMY_EXPENSES}
+        />
+      );
       case "expenseList":
         return <ExpenseListScreen onNavigate={navigate} />;
       default:
