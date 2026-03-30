@@ -90,7 +90,10 @@ function RegisterScreen({ onNavigate }) {
 function OnboardingScreen({ onNavigate }) {
   return (
     <div className="screen onboarding-screen">
-      <img src="/src/img/logo.png" alt="logo" className="logo" />
+      <div className="logo-wrapper">
+        <img src="/src/img/logo.png" alt="logo" className="logo" />
+      </div>
+      <div className="onboarding-logo">Logo</div>
       <h2 className="onboarding-title">
         여행을 추가하고
         <br />
@@ -131,6 +134,7 @@ const COUNTRIES = [
   { flag: "🇬🇷", name: "그리스" },
   { flag: "🇵🇹", name: "포르투갈" },
 ];
+
 // ─── 화면 4: 여행 생성 ───────────────────────────────────────────────────────
 
 function CreateTripScreen({ onNavigate, onAddTrip }) {
@@ -219,9 +223,7 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
         />
 
         {/* 예산 */}
-        <div className="form-label">총 예산</div>
-        <input className="input-field" value={budget} onChange={(e) => setBudget(e.target.value)} />
-
+        <div className="form-label" style={{ marginTop: 16 }}>예산</div>
         <input
           className="input-field"
           placeholder="예) 1000000"
@@ -500,7 +502,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   );
 }
 
-// ─── 화면 7: 통계 test ────────────────────────────────────────────────────────────
+// ─── 화면 7: 통계 ────────────────────────────────────────────────────────────
 
 function StatsScreen({ onNavigate }) {
   const stats = [
@@ -669,7 +671,7 @@ export default function App() {
     <div className="app-root">
       {/* 상단 내비게이션 (개발용 — 프로덕션에서 제거 가능) */}
       <nav className="top-nav">
-        <div className="nav-logo">✈ CosTrip</div>
+        <div className="nav-logo">✈ TripBudget</div>
         <div className="nav-links">
           {[
             ["login", "로그인"],
