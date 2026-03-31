@@ -447,6 +447,34 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
     );
   }
 
+  // ── 날짜 탭 생성 헬퍼 ─────────────────────────────────────────────────────
+  // startDate ~ endDate 범위의 날짜 배열을 생성 (최대 7일 표시)
+  const buildDateTabs = () => {
+    if (!trip.startDate || !trip.endDate) return [];
+    const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+    const start = new Date(trip.startDate);
+    const end   = new Date(trip.endDate);
+    const tabs  = [];
+    const cur   = new Date(start);
+    while (cur <= end && tabs.length < 7) {
+      tabs.push({
+        dayLabel: DAY_LABELS[cur.getDay()],        // 요일 (월/화/수...)
+        dateNum:  cur.getDate(),                    // 일(숫자)
+        month:    cur.getMonth() + 1,               // 월
+        fullDate: cur.toISOString().slice(0, 10),   // YYYY-MM-DD
+      });
+      cur.setDate(cur.getDate() + 1);
+    }
+    return tabs;
+  };
+
+  const dateTabs = buildDateTabs();
+
+  // 선택된 날짜 탭 (기본: 시작일 첫 번째)
+  const [selectedDate, setSelectedDate] = useState(
+    trip.startDate ? trip.startDate : null
+  );
+
   // ── 일반 상세 화면 ─────────────────────────────────────────────────────────
   return (
     <div className="screen trip-detail-screen">
@@ -457,15 +485,35 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
         <span className="menu-icon">☰</span>
       </div>
 
-      {/* 날짜 탭 */}
-      <div className="day-tabs">
-        {["월", "화", "수", "목"].map((d, i) => (
-          <div key={d} className="day-col">
-            <div className="day-label">{d}</div>
-            <div className="day-num">{[30, 31, 1, 2][i]}</div>
+      {/* 날짜 탭 — 등록한 기간으로 동적 생성 */}
+      {dateTabs.length > 0 ? (
+        <div className="day-tabs">
+          {dateTabs.map((d) => (
+            <div
+              key={d.fullDate}
+              className={`day-col${selectedDate === d.fullDate ? " day-col-active" : ""}`}
+              onClick={() => setSelectedDate(d.fullDate)}
+            >
+              <div className="day-label">{d.dayLabel}</div>
+              <div className="day-num">{d.dateNum}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        // 날짜 미입력 시 기간 안내 텍스트
+        <div className="day-tabs">
+          <div style={{ padding: "10px 16px", fontSize: 12, color: "#aaa" }}>
+            여행 기간이 설정되지 않았습니다
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* 선택된 날짜 표시 배지 */}
+      {selectedDate && (
+        <div className="selected-date-badge">
+          📅 {selectedDate.replace(/-/g, ".")} 지출 내역
+        </div>
+      )}
 
       {/* 예산 요약 */}
       <div className="budget-summary">
@@ -477,6 +525,17 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
           <div className="budget-label">잔여예산</div>
           <div className="budget-amount">-</div>
         </div>
+        {/* 여행 기간 표시 */}
+        {trip.startDate && trip.endDate && (
+          <div className="budget-item" style={{ textAlign: "right" }}>
+            <div className="budget-label">여행 기간</div>
+            <div className="budget-amount" style={{ fontSize: 11, fontWeight: 500 }}>
+              {trip.startDate.replace(/-/g, ".")}
+              {" ~ "}
+              {trip.endDate.replace(/-/g, ".")}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 카테고리 필터 버튼 */}
