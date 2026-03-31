@@ -7,6 +7,7 @@ import TripJournalScreen from "./components/journal/TripJournalScreen";
 
 countries.registerLocale(ko);
 
+// ─── 공통 컴포넌트 ───────────────────────────────────────────────────────────
 function GreenButton({ children, onClick, fullWidth }) {
   return (
     <button
@@ -18,6 +19,7 @@ function GreenButton({ children, onClick, fullWidth }) {
   );
 }
 
+// ─── 공통 날짜 헬퍼 ──────────────────────────────────────────────────────────
 function buildTripDays(trip) {
   if (!trip?.startDate || !trip?.endDate) {
     return [
@@ -47,6 +49,7 @@ function buildTripDays(trip) {
   return days;
 }
 
+// ─── 화면 1: 로그인 ──────────────────────────────────────────────────────────
 function LoginScreen({ onNavigate, onLogin }) {
   const [name, setName] = useState("");
   const [pw, setPw] = useState("");
@@ -92,6 +95,7 @@ function LoginScreen({ onNavigate, onLogin }) {
   );
 }
 
+// ─── 화면 2: 회원가입 ────────────────────────────────────────────────────────
 function RegisterScreen({ onNavigate, onLogin }) {
   const [fields, setFields] = useState({
     name: "",
@@ -155,6 +159,7 @@ function RegisterScreen({ onNavigate, onLogin }) {
   );
 }
 
+// ─── 화면 3: 온보딩 ──────────────────────────────────────────────────────────
 function OnboardingScreen({ onNavigate }) {
   return (
     <div className="screen onboarding-screen">
@@ -177,6 +182,7 @@ function OnboardingScreen({ onNavigate }) {
   );
 }
 
+// ─── 여행 생성용 상수 ────────────────────────────────────────────────────────
 const COUNTRIES = Object.entries(countries.getNames("ko")).map(
   ([code, name]) => ({
     code: code.toLowerCase(),
@@ -186,6 +192,7 @@ const COUNTRIES = Object.entries(countries.getNames("ko")).map(
 
 const CREATE_CATEGORIES = ["식비", "교통", "숙박", "관광", "쇼핑", "기타"];
 
+// ─── 화면 4: 여행 생성 ───────────────────────────────────────────────────────
 function CreateTripScreen({ onNavigate, onAddTrip }) {
   const [tripName, setTripName] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -193,6 +200,7 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
   const [categoryBudgets, setCategoryBudgets] = useState([
     { category: "식비", amount: "", customCategory: "" },
   ]);
+  // 국가 검색 관련 상태
   const [countryInput, setCountryInput] = useState("");
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -200,6 +208,7 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
 
   const getFlagUrl = (code) => `https://flagcdn.com/w320/${code}.png`;
 
+  // 입력한 국가명으로 드롭다운 후보 필터링
   const handleCountryInput = (e) => {
     const value = e.target.value;
     setCountryInput(value);
@@ -228,6 +237,7 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
     setShowDropdown(false);
   };
 
+  // 예산 입력 행 추가
   const addCategoryBudget = () => {
     setCategoryBudgets((prev) => [
       ...prev,
@@ -247,6 +257,8 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
     (sum, item) => sum + (Number(item.amount) || 0),
     0
   );
+
+  // 여행 생성 시 예산 입력값을 상세 화면용 expenses로 변환
   const handleCreate = () => {
     if (!tripName.trim()) return;
 
@@ -455,6 +467,7 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
   );
 }
 
+// ─── 화면 5: 홈(여행 목록) ───────────────────────────────────────────────────
 function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
   const defaultCoverImage = "/src/img/user_img/admin/Pic1.jpg";
 
@@ -515,6 +528,7 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
   );
 }
 
+// ─── 상세/통계용 더미 데이터 ─────────────────────────────────────────────────
 const CATEGORIES = ["ALL", "식비", "교통", "숙박", "관광", "쇼핑", "기타"];
 
 const DUMMY_EXPENSES = [
@@ -527,15 +541,19 @@ const DUMMY_EXPENSES = [
   { id: 7, category: "식비", label: "저녁 식사", amount: -32000 },
 ];
 
+// ─── 화면 6: 여행 상세 ───────────────────────────────────────────────────────
 function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [isEditMode, setIsEditMode] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPrices, setEditPrices] = useState({});
+  // 정렬 기준
   const [sortOrder, setSortOrder] = useState("latest");
+  // 전체/지출/수입 필터
   const [amountFilter, setAmountFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState(trip?.startDate ?? null);
 
+  // 선택 여행이 바뀌면 상세 화면 날짜 기준도 함께 갱신
   useEffect(() => {
     setSelectedDate(trip?.startDate ?? null);
   }, [trip?.id, trip?.startDate]);
@@ -558,7 +576,9 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
 
   const budgetLabel = trip.budget?.replace("사용 예산: ", "") ?? trip.budget ?? "-";
   const dateTabs = buildTripDays(trip);
+  // 여행 생성 단계에서 만든 지출 데이터가 있으면 우선 사용
   const baseExpenses = trip.expenses?.length ? trip.expenses : DUMMY_EXPENSES;
+  // 카테고리/금액 조건을 반영한 상세 목록
   const filteredExpenses = [...baseExpenses]
     .filter((expense) =>
       activeCategory === "ALL" ? true : expense.category === activeCategory
@@ -578,6 +598,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
       return 0;
     });
 
+  // 수정 모드 진입 시 현재 값들을 입력창 상태로 펼쳐 놓음
   const enterEditMode = () => {
     setEditName(trip.name);
     const prices = {};
@@ -588,6 +609,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
     setIsEditMode(true);
   };
 
+  // 여행 이름과 지출 금액 수정 내용 저장
   const handleSave = () => {
     if (onUpdateTrip) {
       const nextExpenses = baseExpenses.map((expense) => ({
@@ -608,6 +630,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   };
 
   if (isEditMode) {
+    // 수정 모드에서는 선택한 카테고리만 편집 대상으로 노출
     const editTargets =
       activeCategory === "ALL"
         ? baseExpenses
@@ -823,6 +846,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   );
 }
 
+// ─── 화면 7: 지출 목록 ───────────────────────────────────────────────────────
 function ExpenseListScreen({ onNavigate }) {
   const items = [1, 2, 3, 4, 5];
   const categories = ["전체", "음식", "교통", "관광", "숙박", "쇼핑", "기타"];
@@ -875,6 +899,7 @@ function ExpenseListScreen({ onNavigate }) {
   );
 }
 
+// ─── 메인 앱 ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [screen, setScreen] = useState("login");
   const [trips, setTrips] = useState([]);
@@ -882,10 +907,12 @@ export default function App() {
   const [prevScreen, setPrevScreen] = useState("home");
   const [userName, setUserName] = useState("관리자");
 
+  // 로그인 사용자명 반영
   const handleLogin = (name) => {
     setUserName(name || "관리자");
   };
 
+  // 공통 화면 이동 함수
   const navigate = (destination) => {
     if (destination === "afterLogin") {
       setScreen(trips.length === 0 ? "onboarding" : "home");
@@ -901,19 +928,23 @@ export default function App() {
     setScreen(destination);
   };
 
+  // 여행 생성 후 홈 목록에 추가
   const handleAddTrip = (newTrip) => {
     setTrips((prev) => [...prev, { id: Date.now(), ...newTrip }]);
     setScreen("home");
   };
 
+  // 상세/후기에서 수정된 여행 데이터 반영
   const handleUpdateTrip = (updatedTrip) => {
     setTrips((prev) =>
       prev.map((trip) => (trip.id === updatedTrip.id ? updatedTrip : trip))
     );
   };
 
+  // 현재 선택된 여행
   const selectedTrip = trips.find((trip) => trip.id === selectedTripId) || null;
 
+  // screen 값에 따라 각 화면 컴포넌트를 렌더링
   const renderScreen = () => {
     switch (screen) {
       case "login":
@@ -971,6 +1002,7 @@ export default function App() {
     }
   };
 
+  // 관리자 화면은 폰 목업이 아닌 단독 레이아웃으로 렌더링
   if (screen === "admin") {
     return (
       <div className="min-h-screen w-full bg-gray-100">

@@ -102,6 +102,28 @@ export default function TripJournalScreen({
     setSelectedEntryId(null);
   };
 
+  const handleDeleteDetailImage = (imageIndex) => {
+    if (!selectedEntry) return;
+
+    const nextImagePreviews = (selectedEntry.imagePreviews ?? []).filter(
+      (_, index) => index !== imageIndex
+    );
+    const nextEntries = reviewEntries.map((entry) =>
+      entry.id === selectedEntry.id
+        ? { ...entry, imagePreviews: nextImagePreviews }
+        : entry
+    );
+
+    onUpdateTrip?.({
+      ...trip,
+      journalEntries: nextEntries,
+      coverImage:
+        trip.coverImage === selectedEntry.imagePreviews?.[imageIndex]
+          ? nextImagePreviews[0] || ""
+          : trip.coverImage,
+    });
+  };
+
   return (
     <div className="screen trip-journal-screen">
       <div className="journal-shell">
@@ -182,12 +204,23 @@ export default function TripJournalScreen({
           {selectedEntry.imagePreviews?.length ? (
             <div className="journal-entry-detail-images">
               {selectedEntry.imagePreviews.map((imagePreview, index) => (
-                <img
+                <div
                   key={`${selectedEntry.id}-${index}`}
-                  src={imagePreview}
-                  alt={`기록 이미지 ${index + 1}`}
-                  className="journal-entry-detail-image"
-                />
+                  className="journal-entry-detail-image-card"
+                >
+                  <button
+                    type="button"
+                    className="journal-entry-image-delete"
+                    onClick={() => handleDeleteDetailImage(index)}
+                  >
+                    삭제
+                  </button>
+                  <img
+                    src={imagePreview}
+                    alt={`기록 이미지 ${index + 1}`}
+                    className="journal-entry-detail-image"
+                  />
+                </div>
               ))}
             </div>
           ) : null}
