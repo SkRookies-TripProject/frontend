@@ -873,24 +873,14 @@ export default function App() {
         </div>
       </nav>
 
-<<<<<<< HEAD
       <div className="canvas">
         <div className="phone-mockup">
           <div className="phone-notch"></div>
           <div className="phone-inner">
             {renderScreen()}
-=======
-      {/* 폰 목업 */}
-        <div className="canvas">
-          <div className="phone-mockup">
-            <div className="phone-notch"></div>
-            <div className="phone-inner">
-              {renderScreen()}
-            </div>
-            <div className="phone-home-bar"></div>
->>>>>>> feature/admin-page
           </div>
         </div>
+       </div>
 
     </div>
   );
