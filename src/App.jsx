@@ -3,6 +3,7 @@ import "./app.css";
 import countries from 'i18n-iso-countries';
 import ko from 'i18n-iso-countries/langs/ko.json';
 import AdminPage from "./pages/AdminPage";
+import StatsScreen from "./pages/StatsScreen";
 
 countries.registerLocale(ko);
 
@@ -352,7 +353,8 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
         <div className="home-banner-title">✈ {userName} 님의 여행기록</div>
         <div className="home-banner-sub">지금까지의 여행을 한눈에 확인해보세요</div>
       </div>
-
+        
+        {/* 여행 카드 그리드 */}
       <div className="trip-grid">
         {trips.map((t) => (
           <div
@@ -365,16 +367,8 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
           >
             {/* 국기 썸네일 */}
             <div className="trip-card-thumb" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0' }}>
-              {t.flag && t.flag.startsWith('http') ? (
-                <img 
-                  src={t.flag} 
-                  alt={t.name} 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                />
-              ) : (
-                <span className="trip-card-flag">{t.flag || "🌍"}</span>
-              )}
             </div>
+            
             <div className="trip-card-body">
               <div className="trip-card-name">{t.name}</div>
               <div className="trip-card-budget">{t.budget}</div>
