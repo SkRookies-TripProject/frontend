@@ -1,13 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";import countries from "i18n-iso-countries";
+import ko from "i18n-iso-countries/langs/ko.json";
 import "./app.css";
-import countries from 'i18n-iso-countries';
-import ko from 'i18n-iso-countries/langs/ko.json';
 import AdminPage from "./pages/AdminPage";
 import StatsScreen from "./pages/StatsScreen";
+import TripJournalScreen from "./components/journal/TripJournalScreen";
 
 countries.registerLocale(ko);
-
-// ─── 공통 컴포넌트 ───────────────────────────────────────────────────────────
 
 function GreenButton({ children, onClick, fullWidth }) {
   return (
@@ -20,11 +18,39 @@ function GreenButton({ children, onClick, fullWidth }) {
   );
 }
 
-// ─── 화면 1: 로그인 ──────────────────────────────────────────────────────────
+function buildTripDays(trip) {
+  if (!trip?.startDate || !trip?.endDate) {
+    return [
+      { label: "월", date: 30, fullDate: "3월30일", isoDate: "2026-03-30" },
+      { label: "화", date: 31, fullDate: "3월31일", isoDate: "2026-03-31" },
+      { label: "수", date: 1, fullDate: "4월1일", isoDate: "2026-04-01" },
+      { label: "목", date: 2, fullDate: "4월2일", isoDate: "2026-04-02" },
+    ];
+  }
+
+  const labels = ["일", "월", "화", "수", "목", "금", "토"];
+  const start = new Date(trip.startDate);
+  const end = new Date(trip.endDate);
+  const days = [];
+  const current = new Date(start);
+
+  while (current <= end && days.length < 14) {
+    days.push({
+      label: labels[current.getDay()],
+      date: current.getDate(),
+      fullDate: `${current.getMonth() + 1}월${current.getDate()}일`,
+      isoDate: current.toISOString().slice(0, 10),
+    });
+    current.setDate(current.getDate() + 1);
+  }
+
+  return days;
+}
 
 function LoginScreen({ onNavigate, onLogin }) {
   const [name, setName] = useState("");
   const [pw, setPw] = useState("");
+
   return (
     <div className="screen login-screen">
       <div className="logo-wrapper">
@@ -47,10 +73,13 @@ function LoginScreen({ onNavigate, onLogin }) {
         />
         <p className="find-link">8자 이상 입력하세요</p>
       </div>
-      <GreenButton fullWidth onClick={() => {
-        onLogin(name.trim() || "관리자");
-        onNavigate("afterLogin");
-      }}>
+      <GreenButton
+        fullWidth
+        onClick={() => {
+          onLogin(name.trim() || "관리자");
+          onNavigate("afterLogin");
+        }}
+      >
         로그인
       </GreenButton>
       <p className="sub-link">
@@ -63,24 +92,36 @@ function LoginScreen({ onNavigate, onLogin }) {
   );
 }
 
-// ─── 화면 2: 회원가입 ────────────────────────────────────────────────────────
-
 function RegisterScreen({ onNavigate, onLogin }) {
-  const [fields, setFields] = useState({ name: "", email: "", id: "", pw: "", pw2: "" });
-  const placeholders = ["사용자 이름", "이메일 입력", "아이디 입력", "비밀번호 입력"];
+  const [fields, setFields] = useState({
+    name: "",
+    email: "",
+    id: "",
+    pw: "",
+    pw2: "",
+  });
+  const placeholders = [
+    "사용자 이름",
+    "이메일 입력",
+    "아이디 입력",
+    "비밀번호 입력",
+  ];
   const keys = ["name", "email", "id", "pw"];
+
   return (
     <div className="screen register-screen">
       <h1 className="register-title">회원가입</h1>
       <div className="form-group">
-        {keys.map((k, i) => (
+        {keys.map((key, index) => (
           <input
-            key={k}
+            key={key}
             className="input-field"
-            placeholder={placeholders[i]}
-            type={k === "pw" ? "password" : "text"}
-            value={fields[k]}
-            onChange={(e) => setFields((f) => ({ ...f, [k]: e.target.value }))}
+            placeholder={placeholders[index]}
+            type={key === "pw" ? "password" : "text"}
+            value={fields[key]}
+            onChange={(e) =>
+              setFields((prev) => ({ ...prev, [key]: e.target.value }))
+            }
           />
         ))}
         <p className="find-link">8자 이상 입력하세요</p>
@@ -89,14 +130,19 @@ function RegisterScreen({ onNavigate, onLogin }) {
           placeholder="비밀번호 재입력"
           type="password"
           value={fields.pw2}
-          onChange={(e) => setFields((f) => ({ ...f, pw2: e.target.value }))}
+          onChange={(e) =>
+            setFields((prev) => ({ ...prev, pw2: e.target.value }))
+          }
         />
         <p className="find-link">비밀번호를 확인하세요</p>
       </div>
-      <GreenButton fullWidth onClick={() => {
-        onLogin(fields.name.trim() || "관리자");
-        onNavigate("afterLogin");
-      }}>
+      <GreenButton
+        fullWidth
+        onClick={() => {
+          onLogin(fields.name.trim() || "관리자");
+          onNavigate("afterLogin");
+        }}
+      >
         회원가입/로그인
       </GreenButton>
       <p className="sub-link">
@@ -108,8 +154,6 @@ function RegisterScreen({ onNavigate, onLogin }) {
     </div>
   );
 }
-
-// ─── 화면 3: 온보딩 (여행 없을 때 홈) ────────────────────────────────────────
 
 function OnboardingScreen({ onNavigate }) {
   return (
@@ -133,34 +177,29 @@ function OnboardingScreen({ onNavigate }) {
   );
 }
 
-// ─── 국가 목록──────────────────────────────────────────────────────────────
-
-const countryList = countries.getNames('ko');
-// { KR: '대한민국', JP: '일본', US: '미국', ... }
-
-const COUNTRIES = Object.entries(countries.getNames('ko')).map(([code, name]) => ({
-  code: code.toLowerCase(),
-  name, 
-}));
+const COUNTRIES = Object.entries(countries.getNames("ko")).map(
+  ([code, name]) => ({
+    code: code.toLowerCase(),
+    name,
+  })
+);
 
 const CREATE_CATEGORIES = ["식비", "교통", "숙박", "관광", "쇼핑", "기타"];
-// ─── 화면 4: 여행 생성 ───────────────────────────────────────────────────────
+
 function CreateTripScreen({ onNavigate, onAddTrip }) {
   const [tripName, setTripName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [categoryBudgets, setCategoryBudgets] = useState([
-    { category: "식비", amount: "", customCategory: "" }
+    { category: "식비", amount: "", customCategory: "" },
   ]);
-
-  // 국가 검색 관련 state
   const [countryInput, setCountryInput] = useState("");
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredCountries, setFilteredCountries] = useState([]);
+
   const getFlagUrl = (code) => `https://flagcdn.com/w320/${code}.png`;
 
-  // 텍스트 입력 시 국가 필터링
   const handleCountryInput = (e) => {
     const value = e.target.value;
     setCountryInput(value);
@@ -176,52 +215,55 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
       return;
     }
 
-    const filtered = COUNTRIES.filter((c) =>
-      c.name.toLowerCase().includes(value.toLowerCase())
+    const filtered = COUNTRIES.filter((country) =>
+      country.name.toLowerCase().includes(value.toLowerCase())
     );
     setFilteredCountries(filtered);
     setShowDropdown(true);
   };
 
-  // 드롭다운에서 국가 선택
   const handleSelectCountry = (country) => {
     setSelectedCountry(country);
     setCountryInput(country.name);
     setShowDropdown(false);
   };
 
-  // --- 예산 관련 핸들러 ---
   const addCategoryBudget = () => {
-    setCategoryBudgets([...categoryBudgets, { category: "식비", amount: "", customCategory: "" }]);
+    setCategoryBudgets((prev) => [
+      ...prev,
+      { category: "식비", amount: "", customCategory: "" },
+    ]);
   };
 
   const handleBudgetChange = (index, field, value) => {
-    const updated = [...categoryBudgets];
-    updated[index][field] = value;
-    setCategoryBudgets(updated);
+    setCategoryBudgets((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
   };
 
-  // 총 예산 계산 
-  const totalBudget = categoryBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-
-  // 만들기 버튼
+  const totalBudget = categoryBudgets.reduce(
+    (sum, item) => sum + (Number(item.amount) || 0),
+    0
+  );
   const handleCreate = () => {
     if (!tripName.trim()) return;
 
     const flagInfo = selectedCountry ? getFlagUrl(selectedCountry.code) : "🌍";
-
-    // budgetData → expenses 배열로 변환 (상세 페이지 지출 목록의 원본 데이터)
     const initialExpenses = categoryBudgets
       .filter((item) => Number(item.amount) > 0)
-      .map((item, idx) => ({
-        id: idx + 1,
-        category: item.category === "기타" && item.customCategory
-          ? item.customCategory
-          : item.category,
-        label: item.category === "기타" && item.customCategory
-          ? item.customCategory
-          : item.category,
-        amount: -Number(item.amount), // 지출이므로 음수
+      .map((item, index) => ({
+        id: index + 1,
+        category:
+          item.category === "기타" && item.customCategory
+            ? item.customCategory
+            : item.category,
+        label:
+          item.category === "기타" && item.customCategory
+            ? item.customCategory
+            : item.category,
+        amount: -Number(item.amount),
       }));
 
     onAddTrip({
@@ -232,8 +274,10 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
       endDate,
       budget: `총 ${totalBudget.toLocaleString()}원`,
       budgetData: categoryBudgets,
-      totalBudget: totalBudget,
-      expenses: initialExpenses, // ← 상세 페이지에서 사용할 실제 지출 배열
+      totalBudget,
+      expenses: initialExpenses,
+      coverImage: "",
+      journalEntries: [],
     });
     onNavigate("home");
   };
@@ -241,23 +285,32 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
   return (
     <div className="screen create-trip-screen">
       <div className="top-bar">
-        <span className="back-arrow" onClick={() => onNavigate("back")}>←</span>
+        <span className="back-arrow" onClick={() => onNavigate("back")}>
+          ←
+        </span>
         <span className="top-bar-title">여행 기록하기</span>
       </div>
 
       <div className="create-form">
-        {/* 국가 선택 */}
         <div className="form-label">국가</div>
-        <div className="country-selector" style={{ padding: 0, overflow: "visible", position: "relative" }}>
+        <div
+          className="country-selector"
+          style={{ padding: 0, overflow: "visible", position: "relative" }}
+        >
           <div className="country-flag-large" style={{ paddingLeft: 12 }}>
             {selectedCountry ? (
-              <img 
-                src={getFlagUrl(selectedCountry.code)} 
-                alt="" 
-                style={{ width: '30px', height: '20px', objectFit: 'cover', borderRadius: '2px' }} 
+              <img
+                src={getFlagUrl(selectedCountry.code)}
+                alt=""
+                style={{
+                  width: "30px",
+                  height: "20px",
+                  objectFit: "cover",
+                  borderRadius: "2px",
+                }}
               />
             ) : (
-              <span style={{ fontSize: '20px' }}>🌍</span>
+              <span style={{ fontSize: "20px" }}>🌍</span>
             )}
           </div>
           <input
@@ -272,74 +325,123 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
           />
         </div>
 
-        {/* 검색 드롭다운 */}
         {showDropdown && (
           <div className="country-dropdown">
             {filteredCountries.length > 0 ? (
-              filteredCountries.map((c) => (
-                <div key={c.code} className="country-option" onClick={() => handleSelectCountry(c)}>
-                  <img src={getFlagUrl(c.code)} alt="" style={{ width: '24px', height: '16px', marginRight: '8px' }} />
-                  <span>{c.name}</span>
+              filteredCountries.map((country) => (
+                <div
+                  key={country.code}
+                  className="country-option"
+                  onClick={() => handleSelectCountry(country)}
+                >
+                  <img
+                    src={getFlagUrl(country.code)}
+                    alt=""
+                    style={{
+                      width: "24px",
+                      height: "16px",
+                      marginRight: "8px",
+                    }}
+                  />
+                  <span>{country.name}</span>
                 </div>
               ))
             ) : (
-              <div className="country-option" style={{ color: "#999", cursor: "default" }}>검색 결과가 없습니다</div>
+              <div
+                className="country-option"
+                style={{ color: "#999", cursor: "default" }}
+              >
+                검색 결과가 없습니다
+              </div>
             )}
           </div>
         )}
 
-        {/* 여행 기간 */}
-        <div className="form-label" style={{ marginTop: 16 }}>여행 기간</div>
+        <div className="form-label" style={{ marginTop: 16 }}>
+          여행 기간
+        </div>
         <div className="date-row">
-          <input className="input-field date-input" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          <input
+            className="input-field date-input"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
           <span className="date-sep">~</span>
-          <input className="input-field date-input" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          <input
+            className="input-field date-input"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
         </div>
 
-        {/* 여행 제목 */}
-        <div className="form-label" style={{ marginTop: 16 }}>여행 제목</div>
-        <input className="input-field" placeholder="예) 도쿄 우정여행" value={tripName} onChange={(e) => setTripName(e.target.value)} />
+        <div className="form-label" style={{ marginTop: 16 }}>
+          여행 제목
+        </div>
+        <input
+          className="input-field"
+          placeholder="예) 도쿄 우정여행"
+          value={tripName}
+          onChange={(e) => setTripName(e.target.value)}
+        />
 
-        {/* 예산 설정 */}
-        <div className="form-label" style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between' }}>
+        <div
+          className="form-label"
+          style={{ marginTop: 16, display: "flex", justifyContent: "space-between" }}
+        >
           <span>예산 설정</span>
-          <span onClick={addCategoryBudget} style={{ color: '#10b981', cursor: 'pointer', fontSize: '14px' }}>+ 추가</span>
+          <span
+            onClick={addCategoryBudget}
+            style={{ color: "#10b981", cursor: "pointer", fontSize: "14px" }}
+          >
+            + 추가
+          </span>
         </div>
 
         {categoryBudgets.map((item, index) => (
           <div key={index} className="budget-input-group" style={{ marginBottom: 10 }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <select 
-                className="input-field" 
+            <div style={{ display: "flex", gap: "8px" }}>
+              <select
+                className="input-field"
                 style={{ flex: 1, marginBottom: 0 }}
                 value={item.category}
                 onChange={(e) => handleBudgetChange(index, "category", e.target.value)}
               >
-                {CREATE_CATEGORIES.map(cat => cat !== "ALL" && <option key={cat} value={cat}>{cat}</option>)}
+                {CREATE_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
               </select>
-              <input 
-                className="input-field" 
+              <input
+                className="input-field"
                 style={{ flex: 1.5, marginBottom: 0 }}
-                type="number" 
-                placeholder="금액" 
+                type="number"
+                placeholder="금액"
                 value={item.amount}
                 onChange={(e) => handleBudgetChange(index, "amount", e.target.value)}
               />
             </div>
             {item.category === "기타" && (
-              <input 
-                className="input-field" 
+              <input
+                className="input-field"
                 style={{ marginTop: 8 }}
-                placeholder="카테고리명 입력" 
+                placeholder="카테고리명 입력"
                 value={item.customCategory}
-                onChange={(e) => handleBudgetChange(index, "customCategory", e.target.value)}
+                onChange={(e) =>
+                  handleBudgetChange(index, "customCategory", e.target.value)
+                }
               />
             )}
           </div>
         ))}
 
         {totalBudget > 0 && (
-          <p className="budget-preview" style={{ textAlign: 'right', fontWeight: 'bold', color: '#10b981' }}>
+          <p
+            className="budget-preview"
+            style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}
+          >
             총 {totalBudget.toLocaleString()}원
           </p>
         )}
@@ -352,40 +454,55 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
     </div>
   );
 }
-// ─── 화면 5: 홈(여행 목록) ───────────────────────────────────────────────────
 
 function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
+  const defaultCoverImage = "/src/img/user_img/admin/Pic1.jpg";
+
   return (
     <div className="screen home-screen">
       <div className="home-header">
-        <span className="filter-icon" onClick={() => onNavigate("tripFilter")}>⊟</span>
+        <span className="filter-icon" onClick={() => onNavigate("tripFilter")}>
+          ⌂
+        </span>
         <span className="hamburger">☰</span>
       </div>
 
-      {/* 유저 배너 */}
       <div className="home-banner">
         <div className="home-banner-title">✈ {userName} 님의 여행기록</div>
         <div className="home-banner-sub">지금까지의 여행을 한눈에 확인해보세요</div>
       </div>
-        
-        {/* 여행 카드 그리드 */}
+
       <div className="trip-grid">
-        {trips.map((t) => (
+        {trips.map((trip) => (
           <div
-            key={t.id}
+            key={trip.id}
             className="trip-card"
             onClick={() => {
-              onSelectTrip(t.id);
+              onSelectTrip(trip.id);
               onNavigate("tripDetail");
             }}
           >
-            {/* 국기 썸네일 */}
-            <div className="trip-card-thumb" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0' }}>
+            <div className="trip-card-thumb">
+              <img
+                src={trip.coverImage || defaultCoverImage}
+                alt={`${trip.name} 대표 이미지`}
+                className="trip-card-image"
+              />
             </div>
-            
             <div className="trip-card-body">
-              <div className="trip-card-name">{t.name}</div>
-              <div className="trip-card-budget">{t.budget}</div>
+              <div className="trip-card-name">{trip.name}</div>
+              <div className="trip-card-budget">{trip.budget}</div>
+              <button
+                className="trip-review-link"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectTrip(trip.id);
+                  onNavigate("tripJournal");
+                }}
+              >
+                <span className="trip-review-plus">+</span>
+                <span>후기 작성</span>
+              </button>
             </div>
           </div>
         ))}
@@ -398,11 +515,17 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
   );
 }
 
-// ─── 카테고리 목록 ───────────────────────────────────────────────────────────
-
 const CATEGORIES = ["ALL", "식비", "교통", "숙박", "관광", "쇼핑", "기타"];
 
-// ─── 화면 6: 여행 상세 ────────────────────────────────────────────────────────
+const DUMMY_EXPENSES = [
+  { id: 1, category: "식비", label: "점심 식사", amount: -15000 },
+  { id: 2, category: "교통", label: "지하철", amount: -1350 },
+  { id: 3, category: "숙박", label: "호텔 1박", amount: -80000 },
+  { id: 4, category: "관광", label: "박물관 입장", amount: -12000 },
+  { id: 5, category: "쇼핑", label: "기념품", amount: -25000 },
+  { id: 6, category: "기타", label: "환전 수수료", amount: -3000 },
+  { id: 7, category: "식비", label: "저녁 식사", amount: -32000 },
+];
 
 function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   const [activeCategory, setActiveCategory] = useState("ALL");
@@ -411,15 +534,19 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   const [editPrices, setEditPrices] = useState({});
   const [sortOrder, setSortOrder] = useState("latest");
   const [amountFilter, setAmountFilter] = useState("all");
-  const [selectedDate, setSelectedDate] = useState(
-    trip && trip.startDate ? trip.startDate : null
-  );
+  const [selectedDate, setSelectedDate] = useState(trip?.startDate ?? null);
+
+  useEffect(() => {
+    setSelectedDate(trip?.startDate ?? null);
+  }, [trip?.id, trip?.startDate]);
 
   if (!trip) {
     return (
       <div className="screen trip-detail-screen">
         <div className="detail-header">
-          <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
+          <span className="home-icon" onClick={() => onNavigate("home")}>
+            🏠
+          </span>
           <span className="detail-title">여행을 선택해주세요</span>
         </div>
         <p style={{ padding: "24px", color: "#888", textAlign: "center" }}>
@@ -429,67 +556,62 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
     );
   }
 
-  // trip.expenses가 없으면 빈 배열로 fallback
-  const expenses = trip.expenses || [];
-
-  const budgetLabel = trip.budget || "-";
-
-  // ── 카테고리 + 필터 + 정렬 ────────────────────────────────────────────────
-  const filteredExpenses = (() => {
-    let list = activeCategory === "ALL"
-      ? expenses
-      : expenses.filter((e) => e.category === activeCategory);
-
-    if (amountFilter === "expense") list = list.filter((e) => e.amount < 0);
-    if (amountFilter === "income")  list = list.filter((e) => e.amount > 0);
-
-    return [...list].sort((a, b) => {
+  const budgetLabel = trip.budget?.replace("사용 예산: ", "") ?? trip.budget ?? "-";
+  const dateTabs = buildTripDays(trip);
+  const baseExpenses = trip.expenses?.length ? trip.expenses : DUMMY_EXPENSES;
+  const filteredExpenses = [...baseExpenses]
+    .filter((expense) =>
+      activeCategory === "ALL" ? true : expense.category === activeCategory
+    )
+    .filter((expense) =>
+      amountFilter === "all"
+        ? true
+        : amountFilter === "expense"
+          ? expense.amount < 0
+          : expense.amount > 0
+    )
+    .sort((a, b) => {
       if (sortOrder === "latest") return b.id - a.id;
       if (sortOrder === "oldest") return a.id - b.id;
-      if (sortOrder === "high")   return Math.abs(b.amount) - Math.abs(a.amount);
-      if (sortOrder === "low")    return Math.abs(a.amount) - Math.abs(b.amount);
+      if (sortOrder === "high") return Math.abs(b.amount) - Math.abs(a.amount);
+      if (sortOrder === "low") return Math.abs(a.amount) - Math.abs(b.amount);
       return 0;
     });
-  })();
 
-  // ── 수정 모드 진입 — trip.expenses 기반으로 초기화 ────────────────────────
   const enterEditMode = () => {
     setEditName(trip.name);
     const prices = {};
-    expenses.forEach((e) => {
-      prices[e.id] = Math.abs(e.amount).toString();
+    baseExpenses.forEach((expense) => {
+      prices[expense.id] = Math.abs(expense.amount).toString();
     });
     setEditPrices(prices);
     setIsEditMode(true);
   };
 
-  // ── 저장 — editPrices를 실제 trip.expenses에 반영 ─────────────────────────
   const handleSave = () => {
     if (onUpdateTrip) {
-      const updatedExpenses = expenses.map((e) => ({
-        ...e,
-        amount: editPrices[e.id] !== undefined
-          ? -Math.abs(Number(editPrices[e.id])) // 지출은 항상 음수
-          : e.amount,
+      const nextExpenses = baseExpenses.map((expense) => ({
+        ...expense,
+        amount:
+          expense.amount < 0
+            ? -Math.abs(Number(editPrices[expense.id] || 0))
+            : Math.abs(Number(editPrices[expense.id] || 0)),
       }));
-      // 총예산도 업데이트
-      const newTotal = updatedExpenses.reduce((sum, e) => sum + Math.abs(e.amount), 0);
+
       onUpdateTrip({
         ...trip,
         name: editName,
-        expenses: updatedExpenses,
-        totalBudget: newTotal,
-        budget: `총 ${newTotal.toLocaleString()}원`,
+        expenses: nextExpenses,
       });
     }
     setIsEditMode(false);
   };
 
-  // ── 수정 모드 화면 ─────────────────────────────────────────────────────────
   if (isEditMode) {
-    const editTargets = activeCategory === "ALL"
-      ? expenses
-      : expenses.filter((e) => e.category === activeCategory);
+    const editTargets =
+      activeCategory === "ALL"
+        ? baseExpenses
+        : baseExpenses.filter((expense) => expense.category === activeCategory);
 
     return (
       <div className="screen trip-detail-screen">
@@ -523,28 +645,25 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
             {activeCategory === "ALL" ? "전체" : activeCategory} 카테고리 금액
           </div>
 
-          {editTargets.length === 0 ? (
-            <p style={{ fontSize: 13, color: "#aaa", padding: "16px 0" }}>
-              해당 카테고리에 등록된 예산이 없습니다.
-            </p>
-          ) : (
-            editTargets.map((e) => (
-              <div key={e.id} className="edit-expense-row">
-                <span className="edit-expense-label">{e.label}</span>
-                <div className="edit-expense-input-wrap">
-                  <input
-                    className="input-field edit-amount-input"
-                    type="number"
-                    value={editPrices[e.id] ?? ""}
-                    onChange={(ev) =>
-                      setEditPrices((prev) => ({ ...prev, [e.id]: ev.target.value }))
-                    }
-                  />
-                  <span className="edit-expense-unit">원</span>
-                </div>
+          {editTargets.map((expense) => (
+            <div key={expense.id} className="edit-expense-row">
+              <span className="edit-expense-label">{expense.label}</span>
+              <div className="edit-expense-input-wrap">
+                <input
+                  className="input-field edit-amount-input"
+                  type="number"
+                  value={editPrices[expense.id] ?? ""}
+                  onChange={(e) =>
+                    setEditPrices((prev) => ({
+                      ...prev,
+                      [expense.id]: e.target.value,
+                    }))
+                  }
+                />
+                <span className="edit-expense-unit">원</span>
               </div>
-            ))
-          )}
+            </div>
+          ))}
         </div>
 
         <div style={{ flex: 1 }} />
@@ -555,66 +674,46 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
     );
   }
 
-  // ── 날짜 탭 생성 헬퍼 ─────────────────────────────────────────────────────
-  // startDate ~ endDate 범위의 날짜 배열을 생성 (최대 7일 표시)
-  const buildDateTabs = () => {
-    if (!trip.startDate || !trip.endDate) return [];
-    const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
-    const start = new Date(trip.startDate);
-    const end   = new Date(trip.endDate);
-    const tabs  = [];
-    const cur   = new Date(start);
-    while (cur <= end && tabs.length < 7) {
-      tabs.push({
-        dayLabel: DAY_LABELS[cur.getDay()],        // 요일 (월/화/수...)
-        dateNum:  cur.getDate(),                    // 일(숫자)
-        month:    cur.getMonth() + 1,               // 월
-        fullDate: cur.toISOString().slice(0, 10),   // YYYY-MM-DD
-      });
-      cur.setDate(cur.getDate() + 1);
-    }
-    return tabs;
-  };
-
-  const dateTabs = buildDateTabs();
-
-  // ── 일반 상세 화면 ─────────────────────────────────────────────────────────
   return (
     <div className="screen trip-detail-screen">
-      {/* 헤더 */}
       <div className="detail-header">
-        <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
-      <div className="detail-title-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, justifyContent: 'center' }}>
+        <span className="home-icon" onClick={() => onNavigate("home")}>
+          🏠
+        </span>
+        <div
+          className="detail-title-wrapper"
+          style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, justifyContent: "center" }}
+        >
+          {trip.flag && trip.flag.startsWith("http") ? (
+            <img
+              src={trip.flag}
+              alt=""
+              style={{ width: "24px", height: "16px", objectFit: "cover", borderRadius: "2px" }}
+            />
+          ) : (
+            <span>{trip.flag || "🌍"}</span>
+          )}
+          <span className="detail-title" style={{ fontSize: "16px", fontWeight: "bold" }}>
+            {trip.name}
+          </span>
         </div>
-        {/* 국기 이미지 처리 */}
-        {trip.flag && trip.flag.startsWith('http') ? (
-          <img 
-            src={trip.flag} 
-            alt="" 
-            style={{ width: '24px', height: '16px', objectFit: 'cover', borderRadius: '2px' }} 
-          />
-        ) : (
-          <span>{trip.flag || "🌍"}</span>
-        )}
-        <span className="detail-title" style={{ fontSize: '16px', fontWeight: 'bold' }}>{trip.name}</span>
+        <span className="menu-icon">☰</span>
       </div>
 
-      {/* 날짜 탭 — 등록한 기간으로 동적 생성 */}
       {dateTabs.length > 0 ? (
         <div className="day-tabs">
-          {dateTabs.map((d) => (
+          {dateTabs.map((day) => (
             <div
-              key={d.fullDate}
-              className={`day-col${selectedDate === d.fullDate ? " day-col-active" : ""}`}
-              onClick={() => setSelectedDate(d.fullDate)}
+              key={day.isoDate}
+              className={`day-col${selectedDate === day.isoDate ? " day-col-active" : ""}`}
+              onClick={() => setSelectedDate(day.isoDate)}
             >
-              <div className="day-label">{d.dayLabel}</div>
-              <div className="day-num">{d.dateNum}</div>
+              <div className="day-label">{day.label}</div>
+              <div className="day-num">{day.date}</div>
             </div>
           ))}
         </div>
       ) : (
-        // 날짜 미입력 시 기간 안내 텍스트
         <div className="day-tabs">
           <div style={{ padding: "10px 16px", fontSize: 12, color: "#aaa" }}>
             여행 기간이 설정되지 않았습니다
@@ -622,14 +721,12 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
         </div>
       )}
 
-      {/* 선택된 날짜 표시 배지 */}
       {selectedDate && (
         <div className="selected-date-badge">
           📅 {selectedDate.replace(/-/g, ".")} 지출 내역
         </div>
       )}
 
-      {/* 예산 요약 */}
       <div className="budget-summary">
         <div className="budget-item">
           <div className="budget-label">전체예산</div>
@@ -639,33 +736,28 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
           <div className="budget-label">잔여예산</div>
           <div className="budget-amount">-</div>
         </div>
-        {/* 여행 기간 표시 */}
         {trip.startDate && trip.endDate && (
           <div className="budget-item" style={{ textAlign: "right" }}>
             <div className="budget-label">여행 기간</div>
             <div className="budget-amount" style={{ fontSize: 11, fontWeight: 500 }}>
-              {trip.startDate.replace(/-/g, ".")}
-              {" ~ "}
-              {trip.endDate.replace(/-/g, ".")}
+              {trip.startDate.replace(/-/g, ".")} {" ~ "} {trip.endDate.replace(/-/g, ".")}
             </div>
           </div>
         )}
       </div>
 
-      {/* 카테고리 필터 버튼 */}
       <div className="category-filter-row">
-        {CATEGORIES.map((cat) => (
+        {CATEGORIES.map((category) => (
           <button
-            key={cat}
-            className={`cat-filter-btn${activeCategory === cat ? " active" : ""}`}
-            onClick={() => setActiveCategory(cat)}
+            key={category}
+            className={`cat-filter-btn${activeCategory === category ? " active" : ""}`}
+            onClick={() => setActiveCategory(category)}
           >
-            {cat}
+            {category}
           </button>
         ))}
       </div>
 
-      {/* 정렬 / 수입·지출 필터 행 */}
       <div className="sort-filter-row">
         <select
           className="sort-select"
@@ -680,9 +772,9 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
 
         <div className="amount-filter-group">
           {[
-            { value: "all",     label: "전체" },
+            { value: "all", label: "전체" },
             { value: "expense", label: "지출" },
-            { value: "income",  label: "수입" },
+            { value: "income", label: "수입" },
           ].map(({ value, label }) => (
             <button
               key={value}
@@ -695,7 +787,6 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
         </div>
       </div>
 
-      {/* 지출 목록 */}
       <div className="expense-scroll">
         {filteredExpenses.length === 0 ? (
           <div className="expense-empty">
@@ -705,21 +796,21 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
             </div>
           </div>
         ) : (
-          filteredExpenses.map((e) => (
-            <div key={e.id} className="expense-item">
+          filteredExpenses.map((expense) => (
+            <div key={expense.id} className="expense-item">
               <div>
-                <div className="expense-label">{e.label}</div>
-                <div className="expense-sub">{e.category}</div>
+                <div className="expense-label">{expense.label}</div>
+                <div className="expense-sub">{expense.category}</div>
               </div>
-              <div className={`expense-amount ${e.amount < 0 ? "red-text" : "green-text"}`}>
-                {e.amount < 0 ? "-" : "+"}{Math.abs(e.amount).toLocaleString()}
+              <div className={`expense-amount ${expense.amount < 0 ? "red-text" : "green-text"}`}>
+                {expense.amount < 0 ? "-" : "+"}
+                {Math.abs(expense.amount).toLocaleString()}
               </div>
             </div>
           ))
         )}
       </div>
 
-{/* 하단 버튼 2개 */}
       <div className="detail-bottom-btns">
         <button className="detail-action-btn stats-btn" onClick={() => onNavigate("stats")}>
           📊 통계
@@ -732,26 +823,27 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   );
 }
 
-// ─── 화면 7: 통계 ────────────────────────────────────────────────────────────
-// import pages/StatsScreen.jsx 해서 이 부분은 생략 가능
-
-// ─── 화면 8: 지출 목록 ───────────────────────────────────────────────────────
 function ExpenseListScreen({ onNavigate }) {
   const items = [1, 2, 3, 4, 5];
-  const cats = ["전체", "음식", "교통", "관광", "숙박", "쇼핑", "기타"];
+  const categories = ["전체", "음식", "교통", "관광", "숙박", "쇼핑", "기타"];
+
   return (
     <div className="screen expense-list-screen">
       <div className="detail-header">
-        <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
-        <span className="detail-title">미국 배낭여행</span>
+        <span className="home-icon" onClick={() => onNavigate("home")}>
+          🏠
+        </span>
+        <span className="detail-title">지출 목록</span>
         <span className="menu-icon">☰</span>
       </div>
       <div className="search-bar">
         <input className="search-input" placeholder="🔍 SEARCH HERE..." />
       </div>
       <div className="cat-tabs">
-        {cats.map((c) => (
-          <span key={c} className="cat-tab">{c}</span>
+        {categories.map((category) => (
+          <span key={category} className="cat-tab">
+            {category}
+          </span>
         ))}
       </div>
       <div className="sub-row">
@@ -759,8 +851,8 @@ function ExpenseListScreen({ onNavigate }) {
         <span className="sub-label">최신순</span>
       </div>
       <div className="expense-list">
-        {items.map((i) => (
-          <div key={i} className="expense-row">
+        {items.map((item) => (
+          <div key={item} className="expense-row">
             <div className="expense-row-left">
               <div className="expense-color-bar green-bar"></div>
               <div>
@@ -773,15 +865,15 @@ function ExpenseListScreen({ onNavigate }) {
         ))}
       </div>
       <div className="pagination">
-        {[1, 2, 3, 4, 5].map((p) => (
-          <span key={p} className={`page-dot${p === 1 ? " active" : ""}`}>{p}</span>
+        {[1, 2, 3, 4, 5].map((page) => (
+          <span key={page} className={`page-dot${page === 1 ? " active" : ""}`}>
+            {page}
+          </span>
         ))}
       </div>
     </div>
   );
 }
-
-// ─── 메인 앱 ─────────────────────────────────────────────────────────────────
 
 export default function App() {
   const [screen, setScreen] = useState("login");
@@ -794,17 +886,19 @@ export default function App() {
     setUserName(name || "관리자");
   };
 
-  const navigate = (dest) => {
-    if (dest === "afterLogin") {
+  const navigate = (destination) => {
+    if (destination === "afterLogin") {
       setScreen(trips.length === 0 ? "onboarding" : "home");
       return;
     }
-    if (dest === "back") {
+
+    if (destination === "back") {
       setScreen(prevScreen);
       return;
     }
+
     setPrevScreen(screen);
-    setScreen(dest);
+    setScreen(destination);
   };
 
   const handleAddTrip = (newTrip) => {
@@ -814,12 +908,13 @@ export default function App() {
 
   const handleUpdateTrip = (updatedTrip) => {
     setTrips((prev) =>
-      prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
+      prev.map((trip) => (trip.id === updatedTrip.id ? updatedTrip : trip))
     );
   };
 
+  const selectedTrip = trips.find((trip) => trip.id === selectedTripId) || null;
+
   const renderScreen = () => {
-    const selectedTrip = trips.find((t) => t.id === selectedTripId) || null;
     switch (screen) {
       case "login":
         return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
@@ -839,15 +934,34 @@ export default function App() {
           />
         );
       case "tripDetail":
-        return <TripDetailScreen onNavigate={navigate} trip={selectedTrip} onUpdateTrip={handleUpdateTrip} />;
+        return (
+          <TripDetailScreen
+            onNavigate={navigate}
+            trip={selectedTrip}
+            onUpdateTrip={handleUpdateTrip}
+          />
+        );
+      case "tripJournal":
+        return (
+          <TripJournalScreen
+            onNavigate={navigate}
+            trip={selectedTrip}
+            onUpdateTrip={handleUpdateTrip}
+            renderButton={(label, onClick) => (
+              <GreenButton fullWidth onClick={onClick}>
+                {label}
+              </GreenButton>
+            )}
+          />
+        );
       case "stats":
-      return (
-        <StatsScreen
-          onNavigate={navigate}
-          trip={selectedTrip}
-          expenses={selectedTrip?.expenses || []}
-        />
-      );
+        return (
+          <StatsScreen
+            onNavigate={navigate}
+            trip={selectedTrip}
+            expenses={selectedTrip?.expenses || []}
+          />
+        );
       case "expenseList":
         return <ExpenseListScreen onNavigate={navigate} />;
       case "admin":
@@ -856,15 +970,14 @@ export default function App() {
         return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
     }
   };
-  // 🔥 관리자면 완전히 분리
+
   if (screen === "admin") {
     return (
       <div className="min-h-screen w-full bg-gray-100">
         <nav className="top-nav">
           <div className="nav-logo">✈ CosTrip</div>
         </nav>
-
-         <AdminPage onNavigate={navigate} />
+        <AdminPage onNavigate={navigate} />
       </div>
     );
   }
@@ -875,12 +988,13 @@ export default function App() {
         <div className="nav-logo">✈ CosTrip</div>
         <div className="nav-links">
           {[
-            ["login",       "로그인"],
-            ["register",    "회원가입"],
-            ["onboarding",  "온보딩"],
-            ["home",        "홈"],
-            ["tripDetail",  "여행상세"],
-            ["stats",       "통계"],
+            ["login", "로그인"],
+            ["register", "회원가입"],
+            ["onboarding", "온보딩"],
+            ["home", "홈"],
+            ["tripDetail", "여행상세"],
+            ["tripJournal", "후기작성"],
+            ["stats", "통계"],
             ["expenseList", "지출목록"],
             ["admin", "관리자"],
           ].map(([key, label]) => (
@@ -898,12 +1012,10 @@ export default function App() {
       <div className="canvas">
         <div className="phone-mockup">
           <div className="phone-notch"></div>
-          <div className="phone-inner">
-            {renderScreen()}
-          </div>
+          <div className="phone-inner">{renderScreen()}</div>
+          <div className="phone-home-bar"></div>
         </div>
-       </div>
-
+      </div>
     </div>
   );
 }
