@@ -18,7 +18,7 @@ export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
         <div className="detail-header">
           <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
           <span className="detail-title">여행 통계</span>
-          <span className="menu-icon"></span>
+          <span className="menu-icon">☰</span>
         </div>
         <p style={{ padding: 24, textAlign: "center", color: "#888" }}>
           여행을 먼저 선택해주세요.
@@ -41,13 +41,14 @@ export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
   );
 
   return (
-    <div className="screen stats-screen">
-      <div className="detail-header">
-        <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
-        <span className="detail-title">{trip.flag} {trip.name} 통계</span>
-        <span className="menu-icon"></span>
-      </div>
+  <div className="screen stats-screen">
+    <div className="detail-header">
+      <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
+      <span className="detail-title">{trip.flag} {trip.name} 통계</span>
+      <span className="menu-icon">☰</span>
+    </div>
 
+    <div className="stats-content">
       <TripDayTabs days={tripDays} />
 
       <BudgetSummary
@@ -61,10 +62,9 @@ export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
       </div>
 
       <CategoryDonutChart stats={stats} />
-
       <StatsLegend stats={stats} />
-
       <MonthlyExpenseCalendar calendarData={calendarData} />
     </div>
-  );
+  </div>
+);
 }

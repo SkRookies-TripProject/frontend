@@ -894,40 +894,14 @@ body {
 
 /* ─── 통계 ──────────────────────────────────────────────────────────────────── */
 
-/* .trip-day-tabs-scroll {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding: 8px 4px;
-}
-
-.trip-day-tabs-scroll .day-col {
-  min-width: 52px;
-  text-align: center;
-}
-
-/* stats 화면에서만 3열로 */
-/* .stats-screen .budget-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-.stats-screen .legend-row {
-  display: grid;
-  grid-template-columns: 12px 1fr auto auto;
-  gap: 8px;
-  align-items: center;
-}
-
-.stats-screen .legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-} */ */
  /* 통계 전체 */
 .stats-screen {
+  padding: 0;
   background: #f8f8f8;
+}
+
+.stats-content {
+  padding: 16px;
 }
 
 /* 날짜 박스 */
