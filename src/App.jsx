@@ -289,7 +289,9 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
             }}
           >
             <div className="trip-card-thumb">
-              <span className="trip-card-flag">{t.flag}</span>
+              <div className="logo-wrapper">
+                <img src="/src/img/user_img/admin/Pic1.jpg" alt="pic" className="Pic1" />
+              </div>
             </div>
             <div className="trip-card-body">
               <div className="trip-card-name">{t.name}</div>
