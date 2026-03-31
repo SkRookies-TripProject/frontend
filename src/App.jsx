@@ -328,6 +328,8 @@ function TripJournalScreen({ onNavigate, trip }) {
   const [isWriting, setIsWriting] = useState(false);
   const [reviewImage, setReviewImage] = useState(null);
   const [memo, setMemo] = useState("");
+  const [reviewEntries, setReviewEntries] = useState([]);
+  const [selectedEntryId, setSelectedEntryId] = useState(null);
 
   if (!trip) {
     return (
@@ -346,11 +348,16 @@ function TripJournalScreen({ onNavigate, trip }) {
   }
 
   const tripDays = [
-    { label: "토", date: 30 },
-    { label: "일", date: 31 },
-    { label: "월", date: 1 },
-    { label: "화", date: 2 },
+    { label: "월", date: 30, fullDate: "3월30일" },
+    { label: "화", date: 31, fullDate: "3월31일" },
+    { label: "수", date: 1, fullDate: "4월1일" },
+    { label: "목", date: 2, fullDate: "4월2일" },
   ];
+
+  const selectedDayInfo = tripDays[selectedDay];
+  const selectedEntries = reviewEntries.filter((entry) => entry.dayIndex === selectedDay);
+  const selectedEntry =
+    reviewEntries.find((entry) => entry.id === selectedEntryId) ?? null;
 
   const handleReviewImageChange = (e) => {
     const file = e.target.files?.[0];
@@ -360,6 +367,33 @@ function TripJournalScreen({ onNavigate, trip }) {
       file,
       preview: URL.createObjectURL(file),
     });
+  };
+
+  const handleSaveReview = () => {
+    if (!isWriting) {
+      setSelectedEntryId(null);
+      setIsWriting(true);
+      return;
+    }
+
+    const nextEntry = {
+      id: Date.now(),
+      dayIndex: selectedDay,
+      dateText: selectedDayInfo.fullDate,
+      memo: memo.trim(),
+      imagePreview: reviewImage?.preview ?? "",
+    };
+
+    setReviewEntries((prev) => [nextEntry, ...prev]);
+    setMemo("");
+    setReviewImage(null);
+    setIsWriting(false);
+    setSelectedEntryId(null);
+  };
+
+  const handleOpenEntry = (entryId) => {
+    setIsWriting(false);
+    setSelectedEntryId(entryId);
   };
 
   return (
@@ -426,6 +460,41 @@ function TripJournalScreen({ onNavigate, trip }) {
             />
           </div>
         </div>
+      ) : selectedEntry ? (
+        <div className="journal-entry-detail">
+          <div className="journal-entry-detail-date">{selectedEntry.dateText}</div>
+          {selectedEntry.imagePreview ? (
+            <img
+              src={selectedEntry.imagePreview}
+              alt="기록 이미지"
+              className="journal-entry-detail-image"
+            />
+          ) : null}
+          <div className="journal-entry-detail-card">
+            <div className="journal-entry-detail-label">메모</div>
+            <p className="journal-entry-detail-memo">
+              {selectedEntry.memo || "작성된 메모가 없습니다."}
+            </p>
+          </div>
+        </div>
+      ) : selectedEntries.length > 0 ? (
+        <div className="journal-entry-list">
+          {selectedEntries.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              className="journal-entry-card"
+              onClick={() => handleOpenEntry(entry.id)}
+            >
+              <div className="journal-entry-top">
+                <span className="journal-entry-date">{entry.dateText}</span>
+                <span className="journal-entry-tag">
+                  {entry.memo || "메모 없음"}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
       ) : (
         <div className="journal-empty-state"></div>
       )}
@@ -433,12 +502,15 @@ function TripJournalScreen({ onNavigate, trip }) {
       <GreenButton
         fullWidth
         onClick={() => {
-          if (!isWriting) {
-            setIsWriting(true);
+          if (selectedEntry) {
+            setSelectedEntryId(null);
+            return;
           }
+
+          handleSaveReview();
         }}
       >
-        기록하기
+        {selectedEntry ? "목록으로" : "기록하기"}
       </GreenButton>
     </div>
   );
