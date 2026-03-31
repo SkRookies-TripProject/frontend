@@ -813,7 +813,10 @@ body {
   padding: 10px 16px;
   gap: 4px;
   border-bottom: 1px solid var(--gray-100);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.day-tabs::-webkit-scrollbar { display: none; }
 
 .day-col {
   display: flex;
@@ -821,10 +824,41 @@ body {
   align-items: center;
   gap: 2px;
   flex: 1;
+  min-width: 40px;
+  padding: 4px 2px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.day-col:hover {
+  background: var(--gray-100);
+}
+
+/* 선택된 날짜 탭 */
+.day-col-active {
+  background: var(--green-light);
+}
+.day-col-active .day-label {
+  color: var(--green-dark);
+}
+.day-col-active .day-num {
+  color: var(--green);
 }
 
 .day-label { font-size: 11px; color: var(--gray-400); }
 .day-num { font-size: 14px; font-weight: 600; color: var(--gray-700); }
+
+/* 선택 날짜 배지 */
+.selected-date-badge {
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green-dark);
+  background: var(--green-light);
+  border-bottom: 1px solid var(--gray-100);
+  flex-shrink: 0;
+}
 
 .budget-summary {
   display: flex;
