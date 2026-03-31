@@ -174,6 +174,8 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
       startDate,
       endDate,
       budget: budget ? `사용 예산: ${budget}` : "사용 예산: 미설정",
+      coverImage: "",
+      journalEntries: [],
     });
   };
 
@@ -295,7 +297,15 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
             }}
           >
             <div className="trip-card-thumb">
-              <span className="trip-card-flag">{trip.flag}</span>
+              {trip.coverImage ? (
+                <img
+                  src={trip.coverImage}
+                  alt={`${trip.name} 대표 이미지`}
+                  className="trip-card-image"
+                />
+              ) : (
+                <span className="trip-card-flag">{trip.flag}</span>
+              )}
             </div>
             <div className="trip-card-body">
               <div className="trip-card-name">{trip.name}</div>
@@ -323,12 +333,11 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
   );
 }
 
-function TripJournalScreen({ onNavigate, trip }) {
+function TripJournalScreen({ onNavigate, trip, onUpdateTrip }) {
   const [selectedDay, setSelectedDay] = useState(0);
   const [isWriting, setIsWriting] = useState(false);
-  const [reviewImage, setReviewImage] = useState(null);
+  const [reviewImages, setReviewImages] = useState([]);
   const [memo, setMemo] = useState("");
-  const [reviewEntries, setReviewEntries] = useState([]);
   const [selectedEntryId, setSelectedEntryId] = useState(null);
 
   if (!trip) {
@@ -354,19 +363,24 @@ function TripJournalScreen({ onNavigate, trip }) {
     { label: "목", date: 2, fullDate: "4월2일" },
   ];
 
+  const reviewEntries = trip.journalEntries ?? [];
   const selectedDayInfo = tripDays[selectedDay];
   const selectedEntries = reviewEntries.filter((entry) => entry.dayIndex === selectedDay);
   const selectedEntry =
-    reviewEntries.find((entry) => entry.id === selectedEntryId) ?? null;
+    selectedEntries.find((entry) => entry.id === selectedEntryId) ?? null;
 
   const handleReviewImageChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
 
-    setReviewImage({
-      file,
-      preview: URL.createObjectURL(file),
-    });
+    setReviewImages((prev) => [
+      ...prev,
+      ...files.map((file) => ({
+        id: `${file.name}-${file.lastModified}-${Math.random()}`,
+        file,
+        preview: URL.createObjectURL(file),
+      })),
+    ]);
   };
 
   const handleSaveReview = () => {
@@ -381,14 +395,22 @@ function TripJournalScreen({ onNavigate, trip }) {
       dayIndex: selectedDay,
       dateText: selectedDayInfo.fullDate,
       memo: memo.trim(),
-      imagePreview: reviewImage?.preview ?? "",
+      imagePreviews: reviewImages.map((image) => image.preview),
     };
 
-    setReviewEntries((prev) => [nextEntry, ...prev]);
+    const nextEntries = [nextEntry, ...reviewEntries];
     setMemo("");
-    setReviewImage(null);
+    setReviewImages([]);
     setIsWriting(false);
     setSelectedEntryId(null);
+
+    if (onUpdateTrip) {
+      onUpdateTrip({
+        ...trip,
+        journalEntries: nextEntries,
+        coverImage: trip.coverImage || reviewImages[0]?.preview || "",
+      });
+    }
   };
 
   const handleOpenEntry = (entryId) => {
@@ -412,7 +434,11 @@ function TripJournalScreen({ onNavigate, trip }) {
             <button
               key={`${day.label}-${day.date}`}
               className={`journal-day-btn${selectedDay === index ? " active" : ""}`}
-              onClick={() => setSelectedDay(index)}
+              onClick={() => {
+                setSelectedDay(index);
+                setSelectedEntryId(null);
+                setIsWriting(false);
+              }}
             >
               <span className="journal-day-label">{day.label}</span>
               <span className="journal-day-date">{day.date}</span>
@@ -430,16 +456,22 @@ function TripJournalScreen({ onNavigate, trip }) {
                 className="journal-image-input"
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleReviewImageChange}
               />
-              {reviewImage ? (
+              {reviewImages.length > 0 ? (
                 <div className="journal-image-preview-wrap">
-                  <img
-                    src={reviewImage.preview}
-                    alt="후기 이미지 미리보기"
-                    className="journal-image-preview"
-                  />
-                  <span className="journal-image-change">+ 이미지 변경</span>
+                  <div className="journal-image-preview-list">
+                    {reviewImages.map((image, index) => (
+                      <img
+                        key={image.id}
+                        src={image.preview}
+                        alt={`후기 이미지 미리보기 ${index + 1}`}
+                        className="journal-image-preview"
+                      />
+                    ))}
+                  </div>
+                  <span className="journal-image-change">+ 이미지 추가</span>
                 </div>
               ) : (
                 <div className="journal-image-placeholder">
@@ -463,12 +495,17 @@ function TripJournalScreen({ onNavigate, trip }) {
       ) : selectedEntry ? (
         <div className="journal-entry-detail">
           <div className="journal-entry-detail-date">{selectedEntry.dateText}</div>
-          {selectedEntry.imagePreview ? (
-            <img
-              src={selectedEntry.imagePreview}
-              alt="기록 이미지"
-              className="journal-entry-detail-image"
-            />
+          {selectedEntry.imagePreviews?.length ? (
+            <div className="journal-entry-detail-images">
+              {selectedEntry.imagePreviews.map((imagePreview, index) => (
+                <img
+                  key={`${selectedEntry.id}-${index}`}
+                  src={imagePreview}
+                  alt={`기록 이미지 ${index + 1}`}
+                  className="journal-entry-detail-image"
+                />
+              ))}
+            </div>
           ) : null}
           <div className="journal-entry-detail-card">
             <div className="journal-entry-detail-label">메모</div>
@@ -899,7 +936,13 @@ export default function App() {
           />
         );
       case "tripJournal":
-        return <TripJournalScreen onNavigate={navigate} trip={selectedTrip} />;
+        return (
+          <TripJournalScreen
+            onNavigate={navigate}
+            trip={selectedTrip}
+            onUpdateTrip={handleUpdateTrip}
+          />
+        );
       case "stats":
         return <StatsScreen onNavigate={navigate} />;
       case "expenseList":
