@@ -3,6 +3,7 @@ import "./app.css";
 import countries from 'i18n-iso-countries';
 import ko from 'i18n-iso-countries/langs/ko.json';
 import AdminPage from "./pages/AdminPage";
+import StatsScreen from "./pages/StatsScreen";
 
 countries.registerLocale(ko);
 
@@ -832,7 +833,7 @@ export default function App() {
     return (
       <div className="min-h-screen w-full bg-gray-100">
         <nav className="top-nav">
-          <div className="nav-logo">✈ TripBudget</div>
+          <div className="nav-logo">✈ CosTrip</div>
         </nav>
 
          <AdminPage onNavigate={navigate} />
