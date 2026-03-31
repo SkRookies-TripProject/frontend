@@ -204,22 +204,36 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
   // 총 예산 계산 
   const totalBudget = categoryBudgets.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
-  // 만들기 버튼 (하나로 합침)
+  // 만들기 버튼
   const handleCreate = () => {
     if (!tripName.trim()) return;
-    
-    // FlagCDN 사용을 위해 이미지 URL 생성 혹은 코드 저장
+
     const flagInfo = selectedCountry ? getFlagUrl(selectedCountry.code) : "🌍";
+
+    // budgetData → expenses 배열로 변환 (상세 페이지 지출 목록의 원본 데이터)
+    const initialExpenses = categoryBudgets
+      .filter((item) => Number(item.amount) > 0)
+      .map((item, idx) => ({
+        id: idx + 1,
+        category: item.category === "기타" && item.customCategory
+          ? item.customCategory
+          : item.category,
+        label: item.category === "기타" && item.customCategory
+          ? item.customCategory
+          : item.category,
+        amount: -Number(item.amount), // 지출이므로 음수
+      }));
 
     onAddTrip({
       name: tripName,
-      flag: flagInfo, 
+      flag: flagInfo,
       country: selectedCountry ? selectedCountry.name : countryInput,
       startDate,
       endDate,
-      budget: `총 ${totalBudget.toLocaleString()}원`, // 기존 리스트 표시용
-      budgetData: categoryBudgets, // 상세 분석용
-      totalBudget: totalBudget, 
+      budget: `총 ${totalBudget.toLocaleString()}원`,
+      budgetData: categoryBudgets,
+      totalBudget: totalBudget,
+      expenses: initialExpenses, // ← 상세 페이지에서 사용할 실제 지출 배열
     });
     onNavigate("home");
   };
@@ -388,16 +402,6 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
 
 const CATEGORIES = ["ALL", "식비", "교통", "숙박", "관광", "쇼핑", "기타"];
 
-const DUMMY_EXPENSES = [
-  { id: 1, category: "식비",  label: "점심 식사",    amount: -15000 },
-  { id: 2, category: "교통",  label: "지하철",        amount: -1350  },
-  { id: 3, category: "숙박",  label: "호텔 1박",      amount: -80000 },
-  { id: 4, category: "관광",  label: "박물관 입장",   amount: -12000 },
-  { id: 5, category: "쇼핑",  label: "기념품",        amount: -25000 },
-  { id: 6, category: "기타",  label: "환전 수수료",   amount: -3000  },
-  { id: 7, category: "식비",  label: "저녁 식사",     amount: -32000 },
-];
-
 // ─── 화면 6: 여행 상세 ────────────────────────────────────────────────────────
 
 function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
@@ -405,13 +409,10 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPrices, setEditPrices] = useState({});
-  // 정렬: "latest"=최신순 | "oldest"=오래된순 | "high"=금액높은순 | "low"=금액낮은순
   const [sortOrder, setSortOrder] = useState("latest");
-  // 수입/지출 필터: "all" | "expense" | "income"
   const [amountFilter, setAmountFilter] = useState("all");
-    // 선택된 날짜 탭 (기본: 시작일 첫 번째)
   const [selectedDate, setSelectedDate] = useState(
-    trip.startDate ? trip.startDate : null
+    trip && trip.startDate ? trip.startDate : null
   );
 
   if (!trip) {
@@ -428,13 +429,16 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
     );
   }
 
-  const budgetLabel = trip.budget.replace("사용 예산: ", "");
+  // trip.expenses가 없으면 빈 배열로 fallback
+  const expenses = trip.expenses || [];
 
-  // 카테고리 + 수입/지출 필터 + 정렬 한 번에 처리
+  const budgetLabel = trip.budget || "-";
+
+  // ── 카테고리 + 필터 + 정렬 ────────────────────────────────────────────────
   const filteredExpenses = (() => {
     let list = activeCategory === "ALL"
-      ? DUMMY_EXPENSES
-      : DUMMY_EXPENSES.filter((e) => e.category === activeCategory);
+      ? expenses
+      : expenses.filter((e) => e.category === activeCategory);
 
     if (amountFilter === "expense") list = list.filter((e) => e.amount < 0);
     if (amountFilter === "income")  list = list.filter((e) => e.amount > 0);
@@ -448,26 +452,44 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
     });
   })();
 
+  // ── 수정 모드 진입 — trip.expenses 기반으로 초기화 ────────────────────────
   const enterEditMode = () => {
     setEditName(trip.name);
     const prices = {};
-    DUMMY_EXPENSES.forEach((e) => {
+    expenses.forEach((e) => {
       prices[e.id] = Math.abs(e.amount).toString();
     });
     setEditPrices(prices);
     setIsEditMode(true);
   };
 
+  // ── 저장 — editPrices를 실제 trip.expenses에 반영 ─────────────────────────
   const handleSave = () => {
-    if (onUpdateTrip) onUpdateTrip({ ...trip, name: editName });
+    if (onUpdateTrip) {
+      const updatedExpenses = expenses.map((e) => ({
+        ...e,
+        amount: editPrices[e.id] !== undefined
+          ? -Math.abs(Number(editPrices[e.id])) // 지출은 항상 음수
+          : e.amount,
+      }));
+      // 총예산도 업데이트
+      const newTotal = updatedExpenses.reduce((sum, e) => sum + Math.abs(e.amount), 0);
+      onUpdateTrip({
+        ...trip,
+        name: editName,
+        expenses: updatedExpenses,
+        totalBudget: newTotal,
+        budget: `총 ${newTotal.toLocaleString()}원`,
+      });
+    }
     setIsEditMode(false);
   };
 
   // ── 수정 모드 화면 ─────────────────────────────────────────────────────────
   if (isEditMode) {
     const editTargets = activeCategory === "ALL"
-      ? DUMMY_EXPENSES
-      : DUMMY_EXPENSES.filter((e) => e.category === activeCategory);
+      ? expenses
+      : expenses.filter((e) => e.category === activeCategory);
 
     return (
       <div className="screen trip-detail-screen">
@@ -501,22 +523,28 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
             {activeCategory === "ALL" ? "전체" : activeCategory} 카테고리 금액
           </div>
 
-          {editTargets.map((e) => (
-            <div key={e.id} className="edit-expense-row">
-              <span className="edit-expense-label">{e.label}</span>
-              <div className="edit-expense-input-wrap">
-                <input
-                  className="input-field edit-amount-input"
-                  type="number"
-                  value={editPrices[e.id] ?? ""}
-                  onChange={(ev) =>
-                    setEditPrices((prev) => ({ ...prev, [e.id]: ev.target.value }))
-                  }
-                />
-                <span className="edit-expense-unit">원</span>
+          {editTargets.length === 0 ? (
+            <p style={{ fontSize: 13, color: "#aaa", padding: "16px 0" }}>
+              해당 카테고리에 등록된 예산이 없습니다.
+            </p>
+          ) : (
+            editTargets.map((e) => (
+              <div key={e.id} className="edit-expense-row">
+                <span className="edit-expense-label">{e.label}</span>
+                <div className="edit-expense-input-wrap">
+                  <input
+                    className="input-field edit-amount-input"
+                    type="number"
+                    value={editPrices[e.id] ?? ""}
+                    onChange={(ev) =>
+                      setEditPrices((prev) => ({ ...prev, [e.id]: ev.target.value }))
+                    }
+                  />
+                  <span className="edit-expense-unit">원</span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         <div style={{ flex: 1 }} />
@@ -817,7 +845,7 @@ export default function App() {
         <StatsScreen
           onNavigate={navigate}
           trip={selectedTrip}
-          expenses={DUMMY_EXPENSES}
+          expenses={selectedTrip?.expenses || []}
         />
       );
       case "expenseList":
