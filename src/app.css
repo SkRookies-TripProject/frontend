@@ -770,6 +770,7 @@ body {
 
 /* ── 카드 ── */
 .trip-card {
+  position: relative;
   background: #f5f5f5;
   border-radius: 14px;
   overflow: hidden;
