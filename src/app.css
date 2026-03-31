@@ -180,6 +180,34 @@
   background: #2ecc71;
   color: #fff;
 }
+/* ─── 여행상세: 정렬·필터 행 ──────────────────────────────────────────────── */
+
+.sort-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px 8px;
+  flex-shrink: 0;
+  gap: 8px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+/* 정렬 select */
+.sort-select {
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-family: 'Noto Sans KR', sans-serif;
+  color: var(--gray-700);
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+}
+.sort-select:focus {
+  border-color: var(--green);
+}
 
 /* ─── 수정 모드 폼 ─────────────────────────────────────────────────────────── */
 
@@ -1287,6 +1315,35 @@ body {
 }
 
 .fab:hover { transform: scale(1.1); }
+
+/* ─── 여행상세: 정렬·필터 행 ──────────────────────────────────────────────── */
+
+.sort-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px 8px;
+  flex-shrink: 0;
+  gap: 8px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+/* 정렬 select */
+.sort-select {
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-family: 'Noto Sans KR', sans-serif;
+  color: var(--gray-700);
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+}
+.sort-select:focus {
+  border-color: var(--green);
+}
 
 /* ─── 통계 ──────────────────────────────────────────────────────────────────── */
 

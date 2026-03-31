@@ -1,7 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";import countries from "i18n-iso-countries";
+import ko from "i18n-iso-countries/langs/ko.json";
 import "./app.css";
+import AdminPage from "./pages/AdminPage";
 import StatsScreen from "./pages/StatsScreen";
 import TripJournalScreen from "./components/journal/TripJournalScreen";
+
+countries.registerLocale(ko);
 
 function GreenButton({ children, onClick, fullWidth }) {
   return (
@@ -173,50 +177,109 @@ function OnboardingScreen({ onNavigate }) {
   );
 }
 
-const COUNTRIES = [
-  { flag: "🇰🇷", name: "대한민국" },
-  { flag: "🇺🇸", name: "미국" },
-  { flag: "🇯🇵", name: "일본" },
-  { flag: "🇨🇳", name: "중국" },
-  { flag: "🇫🇷", name: "프랑스" },
-  { flag: "🇩🇪", name: "독일" },
-  { flag: "🇬🇧", name: "영국" },
-  { flag: "🇮🇹", name: "이탈리아" },
-  { flag: "🇪🇸", name: "스페인" },
-  { flag: "🇹🇭", name: "태국" },
-  { flag: "🇻🇳", name: "베트남" },
-  { flag: "🇸🇬", name: "싱가포르" },
-  { flag: "🇦🇺", name: "호주" },
-  { flag: "🇨🇦", name: "캐나다" },
-  { flag: "🇲🇽", name: "멕시코" },
-  { flag: "🇧🇷", name: "브라질" },
-  { flag: "🇮🇳", name: "인도" },
-  { flag: "🇹🇷", name: "튀르키예" },
-  { flag: "🇬🇷", name: "그리스" },
-  { flag: "🇵🇹", name: "포르투갈" },
-];
+const COUNTRIES = Object.entries(countries.getNames("ko")).map(
+  ([code, name]) => ({
+    code: code.toLowerCase(),
+    name,
+  })
+);
+
+const CREATE_CATEGORIES = ["식비", "교통", "숙박", "관광", "쇼핑", "기타"];
 
 function CreateTripScreen({ onNavigate, onAddTrip }) {
   const [tripName, setTripName] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [budget, setBudget] = useState("");
-  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [categoryBudgets, setCategoryBudgets] = useState([
+    { category: "식비", amount: "", customCategory: "" },
+  ]);
+  const [countryInput, setCountryInput] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [filteredCountries, setFilteredCountries] = useState([]);
 
+  const getFlagUrl = (code) => `https://flagcdn.com/w320/${code}.png`;
+
+  const handleCountryInput = (e) => {
+    const value = e.target.value;
+    setCountryInput(value);
+
+    if (selectedCountry && value !== selectedCountry.name) {
+      setSelectedCountry(null);
+    }
+
+    if (value.trim() === "") {
+      setFilteredCountries([]);
+      setShowDropdown(false);
+      setSelectedCountry(null);
+      return;
+    }
+
+    const filtered = COUNTRIES.filter((country) =>
+      country.name.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredCountries(filtered);
+    setShowDropdown(true);
+  };
+
+  const handleSelectCountry = (country) => {
+    setSelectedCountry(country);
+    setCountryInput(country.name);
+    setShowDropdown(false);
+  };
+
+  const addCategoryBudget = () => {
+    setCategoryBudgets((prev) => [
+      ...prev,
+      { category: "식비", amount: "", customCategory: "" },
+    ]);
+  };
+
+  const handleBudgetChange = (index, field, value) => {
+    setCategoryBudgets((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const totalBudget = categoryBudgets.reduce(
+    (sum, item) => sum + (Number(item.amount) || 0),
+    0
+  );
   const handleCreate = () => {
     if (!tripName.trim()) return;
 
+    const flagInfo = selectedCountry ? getFlagUrl(selectedCountry.code) : "🌍";
+    const initialExpenses = categoryBudgets
+      .filter((item) => Number(item.amount) > 0)
+      .map((item, index) => ({
+        id: index + 1,
+        category:
+          item.category === "기타" && item.customCategory
+            ? item.customCategory
+            : item.category,
+        label:
+          item.category === "기타" && item.customCategory
+            ? item.customCategory
+            : item.category,
+        amount: -Number(item.amount),
+      }));
+
     onAddTrip({
       name: tripName,
-      flag: selectedCountry.flag,
-      country: selectedCountry.name,
+      flag: flagInfo,
+      country: selectedCountry ? selectedCountry.name : countryInput,
       startDate,
       endDate,
-      budget: budget ? `사용 예산: ${budget}` : "사용 예산: 미설정",
+      budget: `총 ${totalBudget.toLocaleString()}원`,
+      budgetData: categoryBudgets,
+      totalBudget,
+      expenses: initialExpenses,
       coverImage: "",
       journalEntries: [],
     });
+    onNavigate("home");
   };
 
   return (
@@ -232,30 +295,65 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
         <div className="form-label">국가</div>
         <div
           className="country-selector"
-          onClick={() => setShowCountryPicker((prev) => !prev)}
+          style={{ padding: 0, overflow: "visible", position: "relative" }}
         >
-          <span className="country-flag-large">{selectedCountry.flag}</span>
-          <span className="country-name-text">{selectedCountry.name}</span>
-          <span className="country-arrow">{showCountryPicker ? "▲" : "▼"}</span>
+          <div className="country-flag-large" style={{ paddingLeft: 12 }}>
+            {selectedCountry ? (
+              <img
+                src={getFlagUrl(selectedCountry.code)}
+                alt=""
+                style={{
+                  width: "30px",
+                  height: "20px",
+                  objectFit: "cover",
+                  borderRadius: "2px",
+                }}
+              />
+            ) : (
+              <span style={{ fontSize: "20px" }}>🌍</span>
+            )}
+          </div>
+          <input
+            className="country-search-input"
+            placeholder="국가 이름을 검색하세요"
+            value={countryInput}
+            onChange={handleCountryInput}
+            onFocus={() => {
+              if (countryInput.trim() && !selectedCountry) setShowDropdown(true);
+            }}
+            autoComplete="off"
+          />
         </div>
 
-        {showCountryPicker && (
+        {showDropdown && (
           <div className="country-dropdown">
-            {COUNTRIES.map((country) => (
+            {filteredCountries.length > 0 ? (
+              filteredCountries.map((country) => (
+                <div
+                  key={country.code}
+                  className="country-option"
+                  onClick={() => handleSelectCountry(country)}
+                >
+                  <img
+                    src={getFlagUrl(country.code)}
+                    alt=""
+                    style={{
+                      width: "24px",
+                      height: "16px",
+                      marginRight: "8px",
+                    }}
+                  />
+                  <span>{country.name}</span>
+                </div>
+              ))
+            ) : (
               <div
-                key={country.name}
-                className={`country-option${
-                  selectedCountry.name === country.name ? " selected" : ""
-                }`}
-                onClick={() => {
-                  setSelectedCountry(country);
-                  setShowCountryPicker(false);
-                }}
+                className="country-option"
+                style={{ color: "#999", cursor: "default" }}
               >
-                <span>{country.flag}</span>
-                <span>{country.name}</span>
+                검색 결과가 없습니다
               </div>
-            ))}
+            )}
           </div>
         )}
 
@@ -288,18 +386,64 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
           onChange={(e) => setTripName(e.target.value)}
         />
 
-        <div className="form-label" style={{ marginTop: 16 }}>
-          예산
+        <div
+          className="form-label"
+          style={{ marginTop: 16, display: "flex", justifyContent: "space-between" }}
+        >
+          <span>예산 설정</span>
+          <span
+            onClick={addCategoryBudget}
+            style={{ color: "#10b981", cursor: "pointer", fontSize: "14px" }}
+          >
+            + 추가
+          </span>
         </div>
-        <input
-          className="input-field"
-          placeholder="예) 1000000"
-          type="number"
-          value={budget}
-          onChange={(e) => setBudget(e.target.value)}
-        />
-        {budget && (
-          <p className="budget-preview">{Number(budget).toLocaleString()}원</p>
+
+        {categoryBudgets.map((item, index) => (
+          <div key={index} className="budget-input-group" style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <select
+                className="input-field"
+                style={{ flex: 1, marginBottom: 0 }}
+                value={item.category}
+                onChange={(e) => handleBudgetChange(index, "category", e.target.value)}
+              >
+                {CREATE_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+              <input
+                className="input-field"
+                style={{ flex: 1.5, marginBottom: 0 }}
+                type="number"
+                placeholder="금액"
+                value={item.amount}
+                onChange={(e) => handleBudgetChange(index, "amount", e.target.value)}
+              />
+            </div>
+            {item.category === "기타" && (
+              <input
+                className="input-field"
+                style={{ marginTop: 8 }}
+                placeholder="카테고리명 입력"
+                value={item.customCategory}
+                onChange={(e) =>
+                  handleBudgetChange(index, "customCategory", e.target.value)
+                }
+              />
+            )}
+          </div>
+        ))}
+
+        {totalBudget > 0 && (
+          <p
+            className="budget-preview"
+            style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}
+          >
+            총 {totalBudget.toLocaleString()}원
+          </p>
         )}
       </div>
 
@@ -324,7 +468,7 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
       </div>
 
       <div className="home-banner">
-        <div className="home-banner-title">{userName} 님의 여행기록</div>
+        <div className="home-banner-title">✈ {userName} 님의 여행기록</div>
         <div className="home-banner-sub">지금까지의 여행을 한눈에 확인해보세요</div>
       </div>
 
@@ -412,13 +556,13 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
     );
   }
 
-  const budgetLabel = trip.budget.replace("사용 예산: ", "");
+  const budgetLabel = trip.budget?.replace("사용 예산: ", "") ?? trip.budget ?? "-";
   const dateTabs = buildTripDays(trip);
-  const filteredExpenses = [
-    ...(activeCategory === "ALL"
-      ? DUMMY_EXPENSES
-      : DUMMY_EXPENSES.filter((expense) => expense.category === activeCategory)),
-  ]
+  const baseExpenses = trip.expenses?.length ? trip.expenses : DUMMY_EXPENSES;
+  const filteredExpenses = [...baseExpenses]
+    .filter((expense) =>
+      activeCategory === "ALL" ? true : expense.category === activeCategory
+    )
     .filter((expense) =>
       amountFilter === "all"
         ? true
@@ -437,7 +581,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   const enterEditMode = () => {
     setEditName(trip.name);
     const prices = {};
-    DUMMY_EXPENSES.forEach((expense) => {
+    baseExpenses.forEach((expense) => {
       prices[expense.id] = Math.abs(expense.amount).toString();
     });
     setEditPrices(prices);
@@ -445,15 +589,29 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   };
 
   const handleSave = () => {
-    onUpdateTrip?.({ ...trip, name: editName });
+    if (onUpdateTrip) {
+      const nextExpenses = baseExpenses.map((expense) => ({
+        ...expense,
+        amount:
+          expense.amount < 0
+            ? -Math.abs(Number(editPrices[expense.id] || 0))
+            : Math.abs(Number(editPrices[expense.id] || 0)),
+      }));
+
+      onUpdateTrip({
+        ...trip,
+        name: editName,
+        expenses: nextExpenses,
+      });
+    }
     setIsEditMode(false);
   };
 
   if (isEditMode) {
     const editTargets =
       activeCategory === "ALL"
-        ? DUMMY_EXPENSES
-        : DUMMY_EXPENSES.filter((expense) => expense.category === activeCategory);
+        ? baseExpenses
+        : baseExpenses.filter((expense) => expense.category === activeCategory);
 
     return (
       <div className="screen trip-detail-screen">
@@ -468,12 +626,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
           <span className="detail-title">수정</span>
           <span
             className="menu-icon"
-            style={{
-              fontSize: 14,
-              cursor: "pointer",
-              color: "#2ecc71",
-              fontWeight: 600,
-            }}
+            style={{ fontSize: 14, cursor: "pointer", color: "#2ecc71", fontWeight: 600 }}
             onClick={handleSave}
           >
             저장
@@ -527,15 +680,29 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
         <span className="home-icon" onClick={() => onNavigate("home")}>
           🏠
         </span>
-        <span className="detail-title">
-          {trip.flag} {trip.name}
-        </span>
+        <div
+          className="detail-title-wrapper"
+          style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, justifyContent: "center" }}
+        >
+          {trip.flag && trip.flag.startsWith("http") ? (
+            <img
+              src={trip.flag}
+              alt=""
+              style={{ width: "24px", height: "16px", objectFit: "cover", borderRadius: "2px" }}
+            />
+          ) : (
+            <span>{trip.flag || "🌍"}</span>
+          )}
+          <span className="detail-title" style={{ fontSize: "16px", fontWeight: "bold" }}>
+            {trip.name}
+          </span>
+        </div>
         <span className="menu-icon">☰</span>
       </div>
 
-      <div className="day-tabs">
-        {dateTabs.length > 0 ? (
-          dateTabs.map((day) => (
+      {dateTabs.length > 0 ? (
+        <div className="day-tabs">
+          {dateTabs.map((day) => (
             <div
               key={day.isoDate}
               className={`day-col${selectedDate === day.isoDate ? " day-col-active" : ""}`}
@@ -544,13 +711,15 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
               <div className="day-label">{day.label}</div>
               <div className="day-num">{day.date}</div>
             </div>
-          ))
-        ) : (
+          ))}
+        </div>
+      ) : (
+        <div className="day-tabs">
           <div style={{ padding: "10px 16px", fontSize: 12, color: "#aaa" }}>
             여행 기간이 설정되지 않았습니다
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {selectedDate && (
         <div className="selected-date-badge">
@@ -571,9 +740,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
           <div className="budget-item" style={{ textAlign: "right" }}>
             <div className="budget-label">여행 기간</div>
             <div className="budget-amount" style={{ fontSize: 11, fontWeight: 500 }}>
-              {trip.startDate.replace(/-/g, ".")}
-              {" ~ "}
-              {trip.endDate.replace(/-/g, ".")}
+              {trip.startDate.replace(/-/g, ".")} {" ~ "} {trip.endDate.replace(/-/g, ".")}
             </div>
           </div>
         )}
@@ -635,9 +802,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
                 <div className="expense-label">{expense.label}</div>
                 <div className="expense-sub">{expense.category}</div>
               </div>
-              <div
-                className={`expense-amount ${expense.amount < 0 ? "red-text" : "green-text"}`}
-              >
+              <div className={`expense-amount ${expense.amount < 0 ? "red-text" : "green-text"}`}>
                 {expense.amount < 0 ? "-" : "+"}
                 {Math.abs(expense.amount).toLocaleString()}
               </div>
@@ -647,10 +812,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
       </div>
 
       <div className="detail-bottom-btns">
-        <button
-          className="detail-action-btn stats-btn"
-          onClick={() => onNavigate("stats")}
-        >
+        <button className="detail-action-btn stats-btn" onClick={() => onNavigate("stats")}>
           📊 통계
         </button>
         <button className="detail-action-btn edit-btn-main" onClick={enterEditMode}>
@@ -797,15 +959,28 @@ export default function App() {
           <StatsScreen
             onNavigate={navigate}
             trip={selectedTrip}
-            expenses={DUMMY_EXPENSES}
+            expenses={selectedTrip?.expenses || []}
           />
         );
       case "expenseList":
         return <ExpenseListScreen onNavigate={navigate} />;
+      case "admin":
+        return <AdminPage onNavigate={navigate} />;
       default:
         return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
     }
   };
+
+  if (screen === "admin") {
+    return (
+      <div className="min-h-screen w-full bg-gray-100">
+        <nav className="top-nav">
+          <div className="nav-logo">✈ CosTrip</div>
+        </nav>
+        <AdminPage onNavigate={navigate} />
+      </div>
+    );
+  }
 
   return (
     <div className="app-root">
@@ -821,6 +996,7 @@ export default function App() {
             ["tripJournal", "후기작성"],
             ["stats", "통계"],
             ["expenseList", "지출목록"],
+            ["admin", "관리자"],
           ].map(([key, label]) => (
             <button
               key={key}
