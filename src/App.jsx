@@ -1,7 +1,5 @@
 import { useState } from "react";
-import "./App.css";
-
-// ─── 공통 컴포넌트 ───────────────────────────────────────────────────────────
+import "./app.css";
 
 function GreenButton({ children, onClick, fullWidth }) {
   return (
@@ -14,11 +12,10 @@ function GreenButton({ children, onClick, fullWidth }) {
   );
 }
 
-// ─── 화면 1: 로그인 ──────────────────────────────────────────────────────────
-
-function LoginScreen({ onNavigate }) {
-  const [id, setId] = useState("");
+function LoginScreen({ onNavigate, onLogin }) {
+  const [name, setName] = useState("");
   const [pw, setPw] = useState("");
+
   return (
     <div className="screen login-screen">
       <div className="logo-wrapper">
@@ -28,9 +25,9 @@ function LoginScreen({ onNavigate }) {
       <div className="form-group">
         <input
           className="input-field"
-          placeholder="아이디 입력"
-          value={id}
-          onChange={(e) => setId(e.target.value)}
+          placeholder="이름 입력"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
         <input
           className="input-field"
@@ -41,8 +38,13 @@ function LoginScreen({ onNavigate }) {
         />
         <p className="find-link">8자 이상 입력하세요</p>
       </div>
-      {/* 로그인 완료 시 "afterLogin" 이벤트 발생 → App에서 trips 유무 체크 */}
-      <GreenButton fullWidth onClick={() => onNavigate("afterLogin")}>
+      <GreenButton
+        fullWidth
+        onClick={() => {
+          onLogin(name.trim() || "관리자");
+          onNavigate("afterLogin");
+        }}
+      >
         로그인
       </GreenButton>
       <p className="sub-link">
@@ -55,28 +57,61 @@ function LoginScreen({ onNavigate }) {
   );
 }
 
-// ─── 화면 2: 회원가입 ────────────────────────────────────────────────────────
+function RegisterScreen({ onNavigate, onLogin }) {
+  const [fields, setFields] = useState({
+    name: "",
+    email: "",
+    id: "",
+    pw: "",
+    pw2: "",
+  });
+  const placeholders = [
+    "사용자 이름",
+    "이메일 입력",
+    "아이디 입력",
+    "비밀번호 입력",
+  ];
+  const keys = ["name", "email", "id", "pw"];
 
-function RegisterScreen({ onNavigate }) {
   return (
     <div className="screen register-screen">
       <h1 className="register-title">회원가입</h1>
       <div className="form-group">
-        {["사용자 이름", "이메일 입력", "아이디 입력", "비밀번호 입력"].map(
-          (ph) => (
-            <input key={ph} className="input-field" placeholder={ph} />
-          )
-        )}
+        {keys.map((key, index) => (
+          <input
+            key={key}
+            className="input-field"
+            placeholder={placeholders[index]}
+            type={key === "pw" ? "password" : "text"}
+            value={fields[key]}
+            onChange={(e) =>
+              setFields((prev) => ({ ...prev, [key]: e.target.value }))
+            }
+          />
+        ))}
         <p className="find-link">8자 이상 입력하세요</p>
-        <input className="input-field" placeholder="비밀번호 재입력" />
-        <p className="find-link">비밀번호를 확인하세요</p>
+        <input
+          className="input-field"
+          placeholder="비밀번호 재입력"
+          type="password"
+          value={fields.pw2}
+          onChange={(e) =>
+            setFields((prev) => ({ ...prev, pw2: e.target.value }))
+          }
+        />
+        <p className="find-link">비밀번호를 다시 확인하세요</p>
       </div>
-      {/* 회원가입 완료 시도 "afterLogin" 이벤트 발생 → 신규 유저이므로 항상 온보딩으로 감 */}
-      <GreenButton fullWidth onClick={() => onNavigate("afterLogin")}>
-        회원가입/로그인
+      <GreenButton
+        fullWidth
+        onClick={() => {
+          onLogin(fields.name.trim() || "관리자");
+          onNavigate("afterLogin");
+        }}
+      >
+        회원가입 후 로그인
       </GreenButton>
       <p className="sub-link">
-        계정이 있으신가요?{" "}
+        이미 계정이 있으신가요?{" "}
         <span className="link" onClick={() => onNavigate("login")}>
           로그인하기
         </span>
@@ -84,8 +119,6 @@ function RegisterScreen({ onNavigate }) {
     </div>
   );
 }
-
-// ─── 화면 3: 온보딩 (여행 없을 때 홈) ────────────────────────────────────────
 
 function OnboardingScreen({ onNavigate }) {
   return (
@@ -97,7 +130,7 @@ function OnboardingScreen({ onNavigate }) {
       <h2 className="onboarding-title">
         여행을 추가하고
         <br />
-        예산을 관리해보세요!
+        예산을 관리해보세요
       </h2>
       <p className="onboarding-sub link" onClick={() => onNavigate("login")}>
         가이드 바로가기
@@ -110,36 +143,22 @@ function OnboardingScreen({ onNavigate }) {
   );
 }
 
-// ─── 국가 목록 ───────────────────────────────────────────────────────────────
-
 const COUNTRIES = [
-  { flag: "🇰🇷", name: "대한민국" },
-  { flag: "🇺🇸", name: "미국" },
-  { flag: "🇯🇵", name: "일본" },
-  { flag: "🇨🇳", name: "중국" },
-  { flag: "🇫🇷", name: "프랑스" },
-  { flag: "🇩🇪", name: "독일" },
-  { flag: "🇬🇧", name: "영국" },
-  { flag: "🇮🇹", name: "이탈리아" },
-  { flag: "🇪🇸", name: "스페인" },
-  { flag: "🇹🇭", name: "태국" },
-  { flag: "🇻🇳", name: "베트남" },
-  { flag: "🇸🇬", name: "싱가포르" },
-  { flag: "🇦🇺", name: "호주" },
-  { flag: "🇨🇦", name: "캐나다" },
-  { flag: "🇲🇽", name: "멕시코" },
-  { flag: "🇧🇷", name: "브라질" },
-  { flag: "🇮🇳", name: "인도" },
-  { flag: "🇹🇷", name: "튀르키예" },
-  { flag: "🇬🇷", name: "그리스" },
-  { flag: "🇵🇹", name: "포르투갈" },
+  { flag: "KR", name: "한국" },
+  { flag: "US", name: "미국" },
+  { flag: "JP", name: "일본" },
+  { flag: "CN", name: "중국" },
+  { flag: "FR", name: "프랑스" },
+  { flag: "GB", name: "영국" },
+  { flag: "TH", name: "태국" },
+  { flag: "IT", name: "이탈리아" },
+  { flag: "ES", name: "스페인" },
+  { flag: "SG", name: "싱가포르" },
 ];
-
-// ─── 화면 4: 여행 생성 ───────────────────────────────────────────────────────
 
 function CreateTripScreen({ onNavigate, onAddTrip }) {
   const [tripName, setTripName] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[1]); // 미국 기본값
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [budget, setBudget] = useState("");
@@ -147,6 +166,7 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
 
   const handleCreate = () => {
     if (!tripName.trim()) return;
+
     onAddTrip({
       name: tripName,
       flag: selectedCountry.flag,
@@ -160,43 +180,46 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
   return (
     <div className="screen create-trip-screen">
       <div className="top-bar">
-        <span className="back-arrow" onClick={() => onNavigate("back")}>←</span>
+        <span className="back-arrow" onClick={() => onNavigate("back")}>
+          {"<"}
+        </span>
         <span className="top-bar-title">여행 기록하기</span>
       </div>
 
       <div className="create-form">
-        {/* 국가 선택 */}
         <div className="form-label">국가</div>
         <div
           className="country-selector"
-          onClick={() => setShowCountryPicker(!showCountryPicker)}
+          onClick={() => setShowCountryPicker((prev) => !prev)}
         >
           <span className="country-flag-large">{selectedCountry.flag}</span>
           <span className="country-name-text">{selectedCountry.name}</span>
           <span className="country-arrow">{showCountryPicker ? "▲" : "▼"}</span>
         </div>
 
-        {/* 국가 드롭다운 */}
         {showCountryPicker && (
           <div className="country-dropdown">
-            {COUNTRIES.map((c) => (
+            {COUNTRIES.map((country) => (
               <div
-                key={c.name}
-                className={`country-option${selectedCountry.name === c.name ? " selected" : ""}`}
+                key={country.name}
+                className={`country-option${
+                  selectedCountry.name === country.name ? " selected" : ""
+                }`}
                 onClick={() => {
-                  setSelectedCountry(c);
+                  setSelectedCountry(country);
                   setShowCountryPicker(false);
                 }}
               >
-                <span>{c.flag}</span>
-                <span>{c.name}</span>
+                <span>{country.flag}</span>
+                <span>{country.name}</span>
               </div>
             ))}
           </div>
         )}
 
-        {/* 여행 기간 */}
-        <div className="form-label" style={{ marginTop: 16 }}>여행 기간</div>
+        <div className="form-label" style={{ marginTop: 16 }}>
+          여행 기간
+        </div>
         <div className="date-row">
           <input
             className="input-field date-input"
@@ -213,28 +236,28 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
           />
         </div>
 
-        {/* 여행 제목 */}
-        <div className="form-label" style={{ marginTop: 16 }}>여행 제목</div>
+        <div className="form-label" style={{ marginTop: 16 }}>
+          여행 제목
+        </div>
         <input
           className="input-field"
-          placeholder="예) 도쿄 우정여행"
+          placeholder="예: 도쿄 우정 여행"
           value={tripName}
           onChange={(e) => setTripName(e.target.value)}
         />
 
-        {/* 예산 */}
-        <div className="form-label" style={{ marginTop: 16 }}>예산</div>
+        <div className="form-label" style={{ marginTop: 16 }}>
+          예산
+        </div>
         <input
           className="input-field"
-          placeholder="예) 1000000"
+          placeholder="예: 1000000"
           type="number"
           value={budget}
           onChange={(e) => setBudget(e.target.value)}
         />
         {budget && (
-          <p className="budget-preview">
-            {Number(budget).toLocaleString()}원
-          </p>
+          <p className="budget-preview">{Number(budget).toLocaleString()}원</p>
         )}
       </div>
 
@@ -246,45 +269,47 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
   );
 }
 
-// ─── 화면 5: 홈(여행 목록) ───────────────────────────────────────────────────
-
-function HomeScreen({ trips, onNavigate, onSelectTrip }) {
+function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
   return (
     <div className="screen home-screen">
       <div className="home-header">
-        <span className="filter-icon" onClick={() => onNavigate("tripFilter")}>⊟</span>
+        <span className="filter-icon" onClick={() => onNavigate("tripFilter")}>
+          ⌂
+        </span>
         <span className="hamburger">☰</span>
       </div>
 
+      <div className="home-banner">
+        <div className="home-banner-title">{userName} 님의 여행기록</div>
+        <div className="home-banner-sub">지금까지의 여행을 한눈에 확인해보세요</div>
+      </div>
+
       <div className="trip-grid">
-        {trips.map((t) => (
+        {trips.map((trip) => (
           <div
-            key={t.id}
+            key={trip.id}
             className="trip-card"
             onClick={() => {
-              onSelectTrip(t.id);
+              onSelectTrip(trip.id);
               onNavigate("tripDetail");
             }}
           >
-            {/* 국기 썸네일 영역 */}
             <div className="trip-card-thumb">
-              <span className="trip-card-flag">{t.flag}</span>
+              <span className="trip-card-flag">{trip.flag}</span>
             </div>
-            {/* 텍스트 영역 */}
             <div className="trip-card-body">
-              <div className="trip-card-name">{t.name}</div>
-              <div className="trip-card-budget">{t.budget}</div>
-              {/* 카드 클릭과 별도로 후기 기록 화면으로 이동하는 버튼 */}
+              <div className="trip-card-name">{trip.name}</div>
+              <div className="trip-card-budget">{trip.budget}</div>
               <button
                 className="trip-review-link"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onSelectTrip(t.id);
+                  onSelectTrip(trip.id);
                   onNavigate("tripJournal");
                 }}
               >
                 <span className="trip-review-plus">+</span>
-                <span>후기작성</span>
+                <span>후기 작성</span>
               </button>
             </div>
           </div>
@@ -300,7 +325,7 @@ function HomeScreen({ trips, onNavigate, onSelectTrip }) {
 
 function TripJournalScreen({ onNavigate, trip }) {
   const [selectedDay, setSelectedDay] = useState(0);
-  // 업로드한 후기 이미지를 파일 정보와 미리보기 URL 형태로 저장
+  const [isWriting, setIsWriting] = useState(false);
   const [reviewImage, setReviewImage] = useState(null);
   const [memo, setMemo] = useState("");
 
@@ -309,7 +334,9 @@ function TripJournalScreen({ onNavigate, trip }) {
       <div className="screen trip-journal-screen">
         <div className="journal-shell">
           <div className="journal-header">
-            <span className="filter-icon" onClick={() => onNavigate("home")}>⌂</span>
+            <span className="filter-icon" onClick={() => onNavigate("home")}>
+              ⌂
+            </span>
             <span className="journal-title">여행을 먼저 선택해주세요</span>
             <span className="hamburger">☰</span>
           </div>
@@ -319,17 +346,16 @@ function TripJournalScreen({ onNavigate, trip }) {
   }
 
   const tripDays = [
-    { label: "월", date: 30 },
-    { label: "화", date: 31 },
-    { label: "수", date: 1 },
-    { label: "목", date: 2 },
+    { label: "토", date: 30 },
+    { label: "일", date: 31 },
+    { label: "월", date: 1 },
+    { label: "화", date: 2 },
   ];
 
   const handleReviewImageChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 선택 직후 바로 화면에 보이도록 브라우저 미리보기 URL 생성
     setReviewImage({
       file,
       preview: URL.createObjectURL(file),
@@ -340,7 +366,9 @@ function TripJournalScreen({ onNavigate, trip }) {
     <div className="screen trip-journal-screen">
       <div className="journal-shell">
         <div className="journal-header">
-          <span className="filter-icon" onClick={() => onNavigate("home")}>⌂</span>
+          <span className="filter-icon" onClick={() => onNavigate("home")}>
+            ⌂
+          </span>
           <span className="journal-title">{trip.name}(후기)</span>
           <span className="hamburger">☰</span>
         </div>
@@ -359,88 +387,92 @@ function TripJournalScreen({ onNavigate, trip }) {
         </div>
       </div>
 
-      <div className="journal-content">
-        <div className="journal-field">
-          <label className="journal-label">이미지</label>
-          {/* label을 클릭하면 숨겨진 file input이 열리도록 구성 */}
-          <label className="journal-image-box">
-            <input
-              className="journal-image-input"
-              type="file"
-              accept="image/*"
-              onChange={handleReviewImageChange}
+      {isWriting ? (
+        <div className="journal-content">
+          <div className="journal-field">
+            <label className="journal-label">이미지</label>
+            <label className="journal-image-box">
+              <input
+                className="journal-image-input"
+                type="file"
+                accept="image/*"
+                onChange={handleReviewImageChange}
+              />
+              {reviewImage ? (
+                <div className="journal-image-preview-wrap">
+                  <img
+                    src={reviewImage.preview}
+                    alt="후기 이미지 미리보기"
+                    className="journal-image-preview"
+                  />
+                  <span className="journal-image-change">+ 이미지 변경</span>
+                </div>
+              ) : (
+                <div className="journal-image-placeholder">
+                  <span className="journal-image-plus">+</span>
+                  <span>이미지 추가</span>
+                </div>
+              )}
+            </label>
+          </div>
+
+          <div className="journal-field">
+            <label className="journal-label">메모</label>
+            <textarea
+              className="journal-textarea journal-textarea-small"
+              placeholder="다음에 참고할 메모를 적어보세요"
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
             />
-            {reviewImage ? (
-              // 이미지가 있으면 업로드 영역 대신 미리보기를 표시
-              <div className="journal-image-preview-wrap">
-                <img
-                  src={reviewImage.preview}
-                  alt="후기 이미지 미리보기"
-                  className="journal-image-preview"
-                />
-                <span className="journal-image-change">+ 이미지 변경</span>
-              </div>
-            ) : (
-              // 처음 상태에서는 이미지 추가 안내 UI를 노출
-              <div className="journal-image-placeholder">
-                <span className="journal-image-plus">+</span>
-                <span>이미지 추가</span>
-              </div>
-            )}
-          </label>
+          </div>
         </div>
+      ) : (
+        <div className="journal-empty-state"></div>
+      )}
 
-        <div className="journal-field">
-          <label className="journal-label">메모</label>
-          <textarea
-            className="journal-textarea journal-textarea-small"
-            placeholder="다음에 참고할 메모를 남겨보세요."
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <GreenButton fullWidth>기록하기</GreenButton>
+      <GreenButton
+        fullWidth
+        onClick={() => {
+          if (!isWriting) {
+            setIsWriting(true);
+          }
+        }}
+      >
+        기록하기
+      </GreenButton>
     </div>
   );
 }
 
-// ─── 카테고리 목록 ───────────────────────────────────────────────────────────
-
 const CATEGORIES = ["ALL", "식비", "교통", "숙박", "관광", "쇼핑", "기타"];
 
-// 카테고리별 더미 지출 데이터 (실제로는 trip.expenses 등에서 가져올 것)
 const DUMMY_EXPENSES = [
-  { id: 1, category: "식비",  label: "점심 식사",   amount: -15000 },
-  { id: 2, category: "교통",  label: "지하철",       amount: -1350  },
-  { id: 3, category: "숙박",  label: "호텔 1박",     amount: -80000 },
-  { id: 4, category: "관광",  label: "박물관 입장",  amount: -12000 },
-  { id: 5, category: "쇼핑",  label: "기념품",       amount: -25000 },
-  { id: 6, category: "기타",  label: "환전 수수료",  amount: -3000  },
-  { id: 7, category: "식비",  label: "저녁 식사",   amount: -32000 },
+  { id: 1, category: "식비", label: "저녁 식사", amount: -15000 },
+  { id: 2, category: "교통", label: "지하철", amount: -1350 },
+  { id: 3, category: "숙박", label: "호텔 1박", amount: -80000 },
+  { id: 4, category: "관광", label: "박물관 입장", amount: -12000 },
+  { id: 5, category: "쇼핑", label: "기념품", amount: -25000 },
+  { id: 6, category: "기타", label: "수수료", amount: -3000 },
+  { id: 7, category: "식비", label: "아침 식사", amount: -32000 },
 ];
-
-// ─── 화면 6: 여행 상세 ────────────────────────────────────────────────────────
 
 function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [isEditMode, setIsEditMode] = useState(false);
-
-  // 수정 모드용 로컬 상태
   const [editName, setEditName] = useState("");
   const [editPrices, setEditPrices] = useState({});
 
-  // trip이 없으면 방어
   if (!trip) {
     return (
       <div className="screen trip-detail-screen">
         <div className="detail-header">
-          <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
+          <span className="home-icon" onClick={() => onNavigate("home")}>
+            ⌂
+          </span>
           <span className="detail-title">여행을 선택해주세요</span>
         </div>
         <p style={{ padding: "24px", color: "#888", textAlign: "center" }}>
-          홈에서 여행 카드를 눌러 선택해주세요.
+          홈 화면에서 여행 카드를 선택해주세요.
         </p>
       </div>
     );
@@ -448,24 +480,21 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
 
   const budgetLabel = trip.budget.replace("사용 예산: ", "");
 
-  // 카테고리 필터링
   const filteredExpenses =
     activeCategory === "ALL"
       ? DUMMY_EXPENSES
-      : DUMMY_EXPENSES.filter((e) => e.category === activeCategory);
+      : DUMMY_EXPENSES.filter((expense) => expense.category === activeCategory);
 
-  // 수정 모드 진입 — 현재 값으로 초기화
   const enterEditMode = () => {
     setEditName(trip.name);
     const prices = {};
-    DUMMY_EXPENSES.forEach((e) => {
-      prices[e.id] = Math.abs(e.amount).toString();
+    DUMMY_EXPENSES.forEach((expense) => {
+      prices[expense.id] = Math.abs(expense.amount).toString();
     });
     setEditPrices(prices);
     setIsEditMode(true);
   };
 
-  // 수정 저장
   const handleSave = () => {
     if (onUpdateTrip) {
       onUpdateTrip({ ...trip, name: editName });
@@ -473,12 +502,11 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
     setIsEditMode(false);
   };
 
-  // ── 수정 모드 화면 ─────────────────────────────────────────────────────────
   if (isEditMode) {
     const editTargets =
       activeCategory === "ALL"
         ? DUMMY_EXPENSES
-        : DUMMY_EXPENSES.filter((e) => e.category === activeCategory);
+        : DUMMY_EXPENSES.filter((expense) => expense.category === activeCategory);
 
     return (
       <div className="screen trip-detail-screen">
@@ -488,7 +516,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
             style={{ fontSize: 14, cursor: "pointer", color: "#2ecc71" }}
             onClick={() => setIsEditMode(false)}
           >
-            ← 취소
+            취소
           </span>
           <span className="detail-title">수정</span>
           <span
@@ -501,7 +529,6 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
         </div>
 
         <div className="edit-form">
-          {/* 여행 제목 수정 */}
           <div className="edit-section-label">여행 제목</div>
           <input
             className="input-field"
@@ -509,21 +536,23 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
             onChange={(e) => setEditName(e.target.value)}
           />
 
-          {/* 현재 카테고리 지출 가격 수정 */}
           <div className="edit-section-label" style={{ marginTop: 20 }}>
             {activeCategory === "ALL" ? "전체" : activeCategory} 카테고리 금액
           </div>
 
-          {editTargets.map((e) => (
-            <div key={e.id} className="edit-expense-row">
-              <span className="edit-expense-label">{e.label}</span>
+          {editTargets.map((expense) => (
+            <div key={expense.id} className="edit-expense-row">
+              <span className="edit-expense-label">{expense.label}</span>
               <div className="edit-expense-input-wrap">
                 <input
                   className="input-field edit-amount-input"
                   type="number"
-                  value={editPrices[e.id] ?? ""}
-                  onChange={(ev) =>
-                    setEditPrices((prev) => ({ ...prev, [e.id]: ev.target.value }))
+                  value={editPrices[expense.id] ?? ""}
+                  onChange={(e) =>
+                    setEditPrices((prev) => ({
+                      ...prev,
+                      [expense.id]: e.target.value,
+                    }))
                   }
                 />
                 <span className="edit-expense-unit">원</span>
@@ -540,132 +569,138 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
     );
   }
 
-  // ── 일반 상세 화면 ─────────────────────────────────────────────────────────
   return (
     <div className="screen trip-detail-screen">
-      {/* 헤더 */}
       <div className="detail-header">
-        <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
-        <span className="detail-title">{trip.flag} {trip.name}</span>
+        <span className="home-icon" onClick={() => onNavigate("home")}>
+          ⌂
+        </span>
+        <span className="detail-title">
+          {trip.flag} {trip.name}
+        </span>
         <span className="menu-icon">☰</span>
       </div>
 
-      {/* 날짜 탭 */}
       <div className="day-tabs">
-        {["월", "화", "수", "목"].map((d, i) => (
-          <div key={d} className="day-col">
-            <div className="day-label">{d}</div>
-            <div className="day-num">{[30, 31, 1, 2][i]}</div>
+        {["토", "일", "월", "화"].map((day, index) => (
+          <div key={day} className="day-col">
+            <div className="day-label">{day}</div>
+            <div className="day-num">{[30, 31, 1, 2][index]}</div>
           </div>
         ))}
       </div>
 
-      {/* 예산 요약 */}
       <div className="budget-summary">
         <div className="budget-item">
-          <div className="budget-label">전체예산</div>
+          <div className="budget-label">전체 예산</div>
           <div className="budget-amount">{budgetLabel}</div>
         </div>
         <div className="budget-item">
-          <div className="budget-label">잔여예산</div>
+          <div className="budget-label">잔여 예산</div>
           <div className="budget-amount">-</div>
         </div>
       </div>
 
-      {/* 카테고리 필터 버튼 */}
       <div className="category-filter-row">
-        {CATEGORIES.map((cat) => (
+        {CATEGORIES.map((category) => (
           <button
-            key={cat}
-            className={`cat-filter-btn${activeCategory === cat ? " active" : ""}`}
-            onClick={() => setActiveCategory(cat)}
+            key={category}
+            className={`cat-filter-btn${activeCategory === category ? " active" : ""}`}
+            onClick={() => setActiveCategory(category)}
           >
-            {cat}
+            {category}
           </button>
         ))}
       </div>
 
-      {/* 지출 목록 */}
       <div className="expense-scroll">
         {filteredExpenses.length === 0 ? (
           <div className="expense-empty">
             <div>등록된 지출이 없습니다</div>
             <div style={{ fontSize: 12, color: "#bbb", marginTop: 4 }}>
-              수정 버튼을 눌러 추가해주세요
+              수정 모드에서 추가해주세요
             </div>
           </div>
         ) : (
-          filteredExpenses.map((e) => (
-            <div key={e.id} className="expense-item">
+          filteredExpenses.map((expense) => (
+            <div key={expense.id} className="expense-item">
               <div>
-                <div className="expense-label">{e.label}</div>
-                <div className="expense-sub">{e.category}</div>
+                <div className="expense-label">{expense.label}</div>
+                <div className="expense-sub">{expense.category}</div>
               </div>
-              <div className={`expense-amount ${e.amount < 0 ? "red-text" : "green-text"}`}>
-                {e.amount < 0 ? "-" : "+"}{Math.abs(e.amount).toLocaleString()}
+              <div
+                className={`expense-amount ${
+                  expense.amount < 0 ? "red-text" : "green-text"
+                }`}
+              >
+                {expense.amount < 0 ? "-" : "+"}
+                {Math.abs(expense.amount).toLocaleString()}
               </div>
             </div>
           ))
         )}
       </div>
 
-      {/* 하단 버튼 2개 */}
       <div className="detail-bottom-btns">
-        <button className="detail-action-btn stats-btn" onClick={() => onNavigate("stats")}>
-          📊 통계
+        <button
+          className="detail-action-btn stats-btn"
+          onClick={() => onNavigate("stats")}
+        >
+          통계
         </button>
         <button className="detail-action-btn edit-btn-main" onClick={enterEditMode}>
-          ✏️ 수정
+          수정
         </button>
       </div>
     </div>
   );
 }
 
-// ─── 화면 7: 통계 ────────────────────────────────────────────────────────────
-
 function StatsScreen({ onNavigate }) {
   const stats = [
-    { label: "숙박비", amount: "₩150,000", pct: "42%", color: "#a78bfa" },
-    { label: "쇼핑", amount: "₩150,000", pct: "42%", color: "#f87171" },
-    { label: "식비", amount: "₩150,000", pct: "42%", color: "#34d399" },
+    { label: "숙박", amount: "50,000원", pct: "42%", color: "#a78bfa" },
+    { label: "쇼핑", amount: "50,000원", pct: "42%", color: "#f87171" },
+    { label: "식비", amount: "50,000원", pct: "42%", color: "#34d399" },
   ];
+
   return (
     <div className="screen stats-screen">
       <div className="detail-header">
-        <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
-        <span className="detail-title">대한민국(통계)</span>
+        <span className="home-icon" onClick={() => onNavigate("home")}>
+          ⌂
+        </span>
+        <span className="detail-title">통계</span>
         <span className="menu-icon">☰</span>
       </div>
       <div className="day-tabs">
-        {["월", "화", "수", "목"].map((d, i) => (
-          <div key={d} className="day-col">
-            <div className="day-label">{d}</div>
-            <div className="day-num">{[30, 31, 1, 2][i]}</div>
+        {["토", "일", "월", "화"].map((day, index) => (
+          <div key={day} className="day-col">
+            <div className="day-label">{day}</div>
+            <div className="day-num">{[30, 31, 1, 2][index]}</div>
           </div>
         ))}
       </div>
       <div className="budget-summary">
         <div className="budget-item">
-          <div className="budget-label">전체예산</div>
+          <div className="budget-label">전체 예산</div>
           <div className="budget-amount">400,000</div>
         </div>
         <div className="budget-item">
-          <div className="budget-label">잔여예산</div>
+          <div className="budget-label">잔여 예산</div>
           <div className="budget-amount">250,000</div>
         </div>
       </div>
-      <div className="stats-date-range">3월 30일 ~ 4월 2일 카테고리</div>
+      <div className="stats-date-range">3월 30일 - 4월 2일 카테고리별</div>
       <div className="donut-wrapper">
         <div className="donut"></div>
       </div>
       <div className="stats-legend">
-        {stats.map((s) => (
-          <div key={s.label} className="legend-row">
-            <span className="legend-dot" style={{ background: s.color }}></span>
-            <span className="legend-label">{s.label}</span>
-            <span className="legend-amount">{s.amount}</span>
-            <span className="legend-pct">{s.pct}</span>
+        {stats.map((stat) => (
+          <div key={stat.label} className="legend-row">
+            <span className="legend-dot" style={{ background: stat.color }}></span>
+            <span className="legend-label">{stat.label}</span>
+            <span className="legend-amount">{stat.amount}</span>
+            <span className="legend-pct">{stat.pct}</span>
           </div>
         ))}
       </div>
@@ -673,24 +708,27 @@ function StatsScreen({ onNavigate }) {
   );
 }
 
-// ─── 화면 8: 지출 목록 ───────────────────────────────────────────────────────
-
 function ExpenseListScreen({ onNavigate }) {
   const items = [1, 2, 3, 4, 5];
-  const cats = ["전체", "음식", "교통", "관광", "숙박", "쇼핑", "기타"];
+  const categories = ["전체", "식비", "교통", "관광", "숙박", "쇼핑", "기타"];
+
   return (
     <div className="screen expense-list-screen">
       <div className="detail-header">
-        <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
-        <span className="detail-title">미국 배낭여행</span>
+        <span className="home-icon" onClick={() => onNavigate("home")}>
+          ⌂
+        </span>
+        <span className="detail-title">지출 목록</span>
         <span className="menu-icon">☰</span>
       </div>
       <div className="search-bar">
-        <input className="search-input" placeholder="🔍 SEARCH HERE..." />
+        <input className="search-input" placeholder="SEARCH HERE..." />
       </div>
       <div className="cat-tabs">
-        {cats.map((c) => (
-          <span key={c} className="cat-tab">{c}</span>
+        {categories.map((category) => (
+          <span key={category} className="cat-tab">
+            {category}
+          </span>
         ))}
       </div>
       <div className="sub-row">
@@ -698,86 +736,96 @@ function ExpenseListScreen({ onNavigate }) {
         <span className="sub-label">최신순</span>
       </div>
       <div className="expense-list">
-        {items.map((i) => (
-          <div key={i} className="expense-row">
+        {items.map((item) => (
+          <div key={item} className="expense-row">
             <div className="expense-row-left">
               <div className="expense-color-bar green-bar"></div>
               <div>
                 <div className="expense-row-date">2025.00.00 ~ 2025.00.00</div>
               </div>
             </div>
-            <div className="expense-row-amount">10,000 원</div>
-            <button className="edit-btn">✎</button>
+            <div className="expense-row-amount">10,000원</div>
+            <button className="edit-btn">수정</button>
           </div>
         ))}
       </div>
       <div className="pagination">
-        {[1, 2, 3, 4, 5].map((p) => (
-          <span key={p} className={`page-dot${p === 1 ? " active" : ""}`}>{p}</span>
+        {[1, 2, 3, 4, 5].map((page) => (
+          <span key={page} className={`page-dot${page === 1 ? " active" : ""}`}>
+            {page}
+          </span>
         ))}
       </div>
     </div>
   );
 }
 
-// ─── 메인 앱 ─────────────────────────────────────────────────────────────────
-
 export default function App() {
   const [screen, setScreen] = useState("login");
-  // trips 상태를 최상위에서 관리
   const [trips, setTrips] = useState([]);
-  // 현재 선택된 여행 ID
   const [selectedTripId, setSelectedTripId] = useState(null);
-  // 이전 화면 기록 (뒤로가기용)
   const [prevScreen, setPrevScreen] = useState("home");
+  const [userName, setUserName] = useState("관리자");
 
-  const navigate = (dest) => {
-    // 로그인/회원가입 완료 후 trips 유무에 따라 분기
-    if (dest === "afterLogin") {
+  const handleLogin = (name) => {
+    setUserName(name || "관리자");
+  };
+
+  const navigate = (destination) => {
+    if (destination === "afterLogin") {
       setScreen(trips.length === 0 ? "onboarding" : "home");
       return;
     }
-    // 뒤로가기
-    if (dest === "back") {
+
+    if (destination === "back") {
       setScreen(prevScreen);
       return;
     }
+
     setPrevScreen(screen);
-    setScreen(dest);
+    setScreen(destination);
   };
 
-  // CreateTripScreen에서 호출 — 새 여행 추가 후 홈으로 이동
   const handleAddTrip = (newTrip) => {
-    setTrips((prev) => [
-      ...prev,
-      { id: Date.now(), ...newTrip },
-    ]);
+    setTrips((prev) => [...prev, { id: Date.now(), ...newTrip }]);
     setScreen("home");
   };
 
-  // TripDetailScreen 수정 모드에서 저장 시 호출
   const handleUpdateTrip = (updatedTrip) => {
     setTrips((prev) =>
-      prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
+      prev.map((trip) => (trip.id === updatedTrip.id ? updatedTrip : trip))
     );
   };
 
   const renderScreen = () => {
-    const selectedTrip = trips.find((t) => t.id === selectedTripId) || null;
+    const selectedTrip = trips.find((trip) => trip.id === selectedTripId) || null;
 
     switch (screen) {
       case "login":
-        return <LoginScreen onNavigate={navigate} />;
+        return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
       case "register":
-        return <RegisterScreen onNavigate={navigate} />;
+        return <RegisterScreen onNavigate={navigate} onLogin={handleLogin} />;
       case "onboarding":
         return <OnboardingScreen onNavigate={navigate} />;
       case "createTrip":
         return <CreateTripScreen onNavigate={navigate} onAddTrip={handleAddTrip} />;
       case "home":
-        return <HomeScreen trips={trips} onNavigate={navigate} onSelectTrip={setSelectedTripId} />;
+        return (
+          <HomeScreen
+            trips={trips}
+            onNavigate={navigate}
+            onSelectTrip={setSelectedTripId}
+            userName={userName}
+          />
+        );
       case "tripDetail":
-        return <TripDetailScreen onNavigate={navigate} trip={selectedTrip} onUpdateTrip={handleUpdateTrip} />;
+        return (
+          <TripDetailScreen
+            onNavigate={navigate}
+            trip={selectedTrip}
+            onUpdateTrip={handleUpdateTrip}
+          />
+        );
       case "tripJournal":
         return <TripJournalScreen onNavigate={navigate} trip={selectedTrip} />;
       case "stats":
@@ -785,15 +833,14 @@ export default function App() {
       case "expenseList":
         return <ExpenseListScreen onNavigate={navigate} />;
       default:
-        return <LoginScreen onNavigate={navigate} />;
+        return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
     }
   };
 
   return (
     <div className="app-root">
-      {/* 상단 내비게이션 (개발용 — 프로덕션에서 제거 가능) */}
       <nav className="top-nav">
-        <div className="nav-logo">✈ TripBudget</div>
+        <div className="nav-logo">TripBudget</div>
         <div className="nav-links">
           {[
             ["login", "로그인"],
@@ -815,13 +862,10 @@ export default function App() {
         </div>
       </nav>
 
-      {/* 폰 목업 */}
       <div className="canvas">
         <div className="phone-mockup">
           <div className="phone-notch"></div>
-          <div className="phone-inner">
-            {renderScreen()}
-          </div>
+          <div className="phone-inner">{renderScreen()}</div>
           <div className="phone-home-bar"></div>
         </div>
       </div>
