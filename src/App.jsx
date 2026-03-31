@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./App.css";
+import AdminPage from "./pages/AdminPage";
 
 // ─── 공통 컴포넌트 ───────────────────────────────────────────────────────────
 
@@ -690,6 +691,8 @@ export default function App() {
         return <StatsScreen onNavigate={navigate} />;
       case "expenseList":
         return <ExpenseListScreen onNavigate={navigate} />;
+      case "admin":
+        return <AdminPage onNavigate={navigate} />;
       default:
         return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
     }
@@ -709,6 +712,7 @@ export default function App() {
             ["tripDetail", "여행상세"],
             ["stats", "통계"],
             ["expenseList", "지출목록"],
+            ["admin", "관리자"],
           ].map(([key, label]) => (
             <button
               key={key}
@@ -722,15 +726,21 @@ export default function App() {
       </nav>
 
       {/* 폰 목업 */}
-      <div className="canvas">
-        <div className="phone-mockup">
-          <div className="phone-notch"></div>
-          <div className="phone-inner">
-            {renderScreen()}
+      {/* 관리자면 아예 따로 */}
+      {screen === "admin" ? (
+        renderScreen()
+      ) : (
+        <div className="canvas">
+          <div className="phone-mockup">
+            <div className="phone-notch"></div>
+            <div className="phone-inner">
+              {renderScreen()}
+            </div>
+            <div className="phone-home-bar"></div>
           </div>
-          <div className="phone-home-bar"></div>
         </div>
-      </div>
+      )}
+
     </div>
   );
 }
