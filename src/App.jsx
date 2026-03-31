@@ -697,6 +697,18 @@ export default function App() {
         return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
     }
   };
+  // 🔥 관리자면 완전히 분리
+  if (screen === "admin") {
+    return (
+      <div className="min-h-screen w-full bg-gray-100">
+        <nav className="top-nav">
+          <div className="nav-logo">✈ TripBudget</div>
+        </nav>
+
+         <AdminPage onNavigate={navigate} />
+      </div>
+    );
+  }
 
   return (
     <div className="app-root">
@@ -726,10 +738,6 @@ export default function App() {
       </nav>
 
       {/* 폰 목업 */}
-      {/* 관리자면 아예 따로 */}
-      {screen === "admin" ? (
-        renderScreen()
-      ) : (
         <div className="canvas">
           <div className="phone-mockup">
             <div className="phone-notch"></div>
@@ -739,7 +747,6 @@ export default function App() {
             <div className="phone-home-bar"></div>
           </div>
         </div>
-      )}
 
     </div>
   );
