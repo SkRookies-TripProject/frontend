@@ -554,17 +554,82 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   const [selectedDate, setSelectedDate] = useState(trip?.startDate ?? null);
 
   // 선택 여행이 바뀌면 상세 화면 날짜 기준도 함께 갱신
+  // ── 일별 금액 입력 상태 ────────────────────────────────────────────────────
+  // isDailyInputMode: 선택한 날짜에 지출이 없을 때 입력 폼을 보여줄지 여부
+  const [isDailyInputMode, setIsDailyInputMode] = useState(false);
+  // 입력 중인 지출 항목 목록 [{ category, amount, memo }]
+  const [dailyInputItems, setDailyInputItems] = useState([
+    { category: "식비", amount: "", memo: "" },
+  ]);
+
   useEffect(() => {
     setSelectedDate(trip?.startDate ?? null);
+    setIsDailyInputMode(false);
   }, [trip?.id, trip?.startDate]);
+
+  // 날짜 탭 클릭 핸들러 — 해당 날짜 지출 여부에 따라 입력 폼 전환
+  const handleDateSelect = (isoDate) => {
+    setSelectedDate(isoDate);
+    setActiveCategory("ALL");
+    const existing = (trip?.dailyExpenses || {})[isoDate];
+    // 해당 날짜 지출이 없으면 바로 입력 모드 진입
+    setIsDailyInputMode(!existing || existing.length === 0);
+    setDailyInputItems([{ category: "식비", amount: "", memo: "" }]);
+  };
+
+  // 일별 입력 항목 추가
+  const addDailyItem = () => {
+    setDailyInputItems((prev) => [...prev, { category: "식비", amount: "", memo: "" }]);
+  };
+
+  // 일별 입력 항목 변경
+  const handleDailyItemChange = (index, field, value) => {
+    setDailyInputItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+    );
+  };
+
+  // 일별 입력 항목 삭제
+  const removeDailyItem = (index) => {
+    setDailyInputItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // 일별 지출 저장 — trip.dailyExpenses[isoDate] 에 추가
+  const saveDailyExpenses = () => {
+    const validItems = dailyInputItems.filter((item) => Number(item.amount) > 0);
+    if (validItems.length === 0) {
+      setIsDailyInputMode(false);
+      return;
+    }
+
+    const existing = (trip?.dailyExpenses || {})[selectedDate] || [];
+    const nextId = Date.now();
+    const newItems = validItems.map((item, i) => ({
+      id: nextId + i,
+      date: selectedDate,
+      category: item.category,
+      label: item.category,
+      memo: item.memo,
+      amount: -Math.abs(Number(item.amount)), // 지출 = 음수
+    }));
+
+    onUpdateTrip({
+      ...trip,
+      dailyExpenses: {
+        ...(trip.dailyExpenses || {}),
+        [selectedDate]: [...existing, ...newItems],
+      },
+    });
+
+    setIsDailyInputMode(false);
+    setDailyInputItems([{ category: "식비", amount: "", memo: "" }]);
+  };
 
   if (!trip) {
     return (
       <div className="screen trip-detail-screen">
         <div className="detail-header">
-          <span className="home-icon" onClick={() => onNavigate("home")}>
-            🏠
-          </span>
+          <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
           <span className="detail-title">여행을 선택해주세요</span>
         </div>
         <p style={{ padding: "24px", color: "#888", textAlign: "center" }}>
@@ -576,19 +641,24 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
 
   const budgetLabel = trip.budget?.replace("사용 예산: ", "") ?? trip.budget ?? "-";
   const dateTabs = buildTripDays(trip);
+
   // 여행 생성 단계에서 만든 지출 데이터가 있으면 우선 사용
   const baseExpenses = trip.expenses?.length ? trip.expenses : DUMMY_EXPENSES;
   // 카테고리/금액 조건을 반영한 상세 목록
+
+
+  // 선택된 날짜의 지출 목록 (dailyExpenses 우선, 없으면 빈 배열)
+  const dailyExpenses = selectedDate
+    ? (trip?.dailyExpenses || {})[selectedDate] || []
+    : [];
+
+  // 전체 지출 (모든 날짜 합산) — 카테고리/정렬 필터 적용
+  const allExpenses = Object.values(trip?.dailyExpenses || {}).flat();
+ 
   const filteredExpenses = [...baseExpenses]
-    .filter((expense) =>
-      activeCategory === "ALL" ? true : expense.category === activeCategory
-    )
-    .filter((expense) =>
-      amountFilter === "all"
-        ? true
-        : amountFilter === "expense"
-          ? expense.amount < 0
-          : expense.amount > 0
+    .filter((e) => activeCategory === "ALL" || e.category === activeCategory)
+    .filter((e) =>
+      amountFilter === "all" ? true : amountFilter === "expense" ? e.amount < 0 : e.amount > 0
     )
     .sort((a, b) => {
       if (sortOrder === "latest") return b.id - a.id;
@@ -598,12 +668,20 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
       return 0;
     });
 
+
   // 수정 모드 진입 시 현재 값들을 입력창 상태로 펼쳐 놓음
+
+  // 전체 지출 합계 (잔여예산 계산용)
+  const totalSpent = allExpenses.reduce((sum, e) => sum + Math.abs(e.amount), 0);
+  const totalBudgetNum = trip.totalBudget || 0;
+  const remaining = totalBudgetNum - totalSpent;
+
+  // ── 수정 모드 (여행 제목 + 카테고리 금액) ─────────────────────────────────
   const enterEditMode = () => {
     setEditName(trip.name);
     const prices = {};
-    baseExpenses.forEach((expense) => {
-      prices[expense.id] = Math.abs(expense.amount).toString();
+    allExpenses.forEach((e) => {
+      prices[e.id] = Math.abs(e.amount).toString();
     });
     setEditPrices(prices);
     setIsEditMode(true);
@@ -612,107 +690,93 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   // 여행 이름과 지출 금액 수정 내용 저장
   const handleSave = () => {
     if (onUpdateTrip) {
-      const nextExpenses = baseExpenses.map((expense) => ({
-        ...expense,
-        amount:
-          expense.amount < 0
-            ? -Math.abs(Number(editPrices[expense.id] || 0))
-            : Math.abs(Number(editPrices[expense.id] || 0)),
-      }));
-
-      onUpdateTrip({
-        ...trip,
-        name: editName,
-        expenses: nextExpenses,
+      // dailyExpenses 내부 금액 업데이트
+      const nextDailyExpenses = {};
+      Object.entries(trip?.dailyExpenses || {}).forEach(([date, items]) => {
+        nextDailyExpenses[date] = items.map((e) => ({
+          ...e,
+          amount: editPrices[e.id] !== undefined
+            ? -Math.abs(Number(editPrices[e.id]))
+            : e.amount,
+        }));
       });
+      onUpdateTrip({ ...trip, name: editName, dailyExpenses: nextDailyExpenses });
     }
     setIsEditMode(false);
   };
 
+  // ── 수정 모드 화면 ─────────────────────────────────────────────────────────
   if (isEditMode) {
+
     // 수정 모드에서는 선택한 카테고리만 편집 대상으로 노출
-    const editTargets =
-      activeCategory === "ALL"
-        ? baseExpenses
-        : baseExpenses.filter((expense) => expense.category === activeCategory);
+    const editTargets = activeCategory === "ALL"
+      ? allExpenses
+      : allExpenses.filter((e) => e.category === activeCategory);
 
     return (
       <div className="screen trip-detail-screen">
         <div className="detail-header">
-          <span
-            className="home-icon"
-            style={{ fontSize: 14, cursor: "pointer", color: "#2ecc71" }}
-            onClick={() => setIsEditMode(false)}
-          >
-            ← 취소
-          </span>
+          <span style={{ fontSize: 13, cursor: "pointer", color: "#2ecc71" }}
+            onClick={() => setIsEditMode(false)}>← 취소</span>
           <span className="detail-title">수정</span>
-          <span
-            className="menu-icon"
-            style={{ fontSize: 14, cursor: "pointer", color: "#2ecc71", fontWeight: 600 }}
-            onClick={handleSave}
-          >
-            저장
-          </span>
+          <span style={{ fontSize: 13, cursor: "pointer", color: "#2ecc71", fontWeight: 600 }}
+            onClick={handleSave}>저장</span>
         </div>
 
         <div className="edit-form">
           <div className="edit-section-label">여행 제목</div>
-          <input
-            className="input-field"
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-          />
+          <input className="input-field" value={editName}
+            onChange={(e) => setEditName(e.target.value)} />
 
           <div className="edit-section-label" style={{ marginTop: 20 }}>
             {activeCategory === "ALL" ? "전체" : activeCategory} 카테고리 금액
           </div>
 
-          {editTargets.map((expense) => (
-            <div key={expense.id} className="edit-expense-row">
-              <span className="edit-expense-label">{expense.label}</span>
-              <div className="edit-expense-input-wrap">
-                <input
-                  className="input-field edit-amount-input"
-                  type="number"
-                  value={editPrices[expense.id] ?? ""}
-                  onChange={(e) =>
-                    setEditPrices((prev) => ({
-                      ...prev,
-                      [expense.id]: e.target.value,
-                    }))
-                  }
-                />
-                <span className="edit-expense-unit">원</span>
+          {editTargets.length === 0 ? (
+            <p style={{ fontSize: 13, color: "#aaa", padding: "16px 0" }}>
+              등록된 지출 항목이 없습니다.
+            </p>
+          ) : (
+            editTargets.map((e) => (
+              <div key={e.id} className="edit-expense-row">
+                <div>
+                  <span className="edit-expense-label">{e.label}</span>
+                  {e.date && (
+                    <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
+                      {e.date.replace(/-/g, ".")}
+                    </div>
+                  )}
+                </div>
+                <div className="edit-expense-input-wrap">
+                  <input className="input-field edit-amount-input" type="number"
+                    value={editPrices[e.id] ?? ""}
+                    onChange={(ev) =>
+                      setEditPrices((prev) => ({ ...prev, [e.id]: ev.target.value }))
+                    } />
+                  <span className="edit-expense-unit">원</span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         <div style={{ flex: 1 }} />
-        <GreenButton fullWidth onClick={handleSave}>
-          저장하기
-        </GreenButton>
+        <GreenButton fullWidth onClick={handleSave}>저장하기</GreenButton>
       </div>
     );
   }
 
+  // ── 일반 상세 화면 ─────────────────────────────────────────────────────────
   return (
     <div className="screen trip-detail-screen">
+      {/* 헤더 */}
       <div className="detail-header">
-        <span className="home-icon" onClick={() => onNavigate("home")}>
-          🏠
-        </span>
-        <div
-          className="detail-title-wrapper"
-          style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, justifyContent: "center" }}
-        >
+        <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
+        <div className="detail-title-wrapper"
+          style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, justifyContent: "center" }}>
           {trip.flag && trip.flag.startsWith("http") ? (
-            <img
-              src={trip.flag}
-              alt=""
-              style={{ width: "24px", height: "16px", objectFit: "cover", borderRadius: "2px" }}
-            />
+            <img src={trip.flag} alt=""
+              style={{ width: "24px", height: "16px", objectFit: "cover", borderRadius: "2px" }} />
           ) : (
             <span>{trip.flag || "🌍"}</span>
           )}
@@ -723,18 +787,51 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
         <span className="menu-icon">☰</span>
       </div>
 
+      {/* ① 전체 예산 요약 (달력 위) */}
+      <div className="budget-summary">
+        <div className="budget-item">
+          <div className="budget-label">전체예산</div>
+          <div className="budget-amount">{budgetLabel}</div>
+        </div>
+        <div className="budget-item">
+          <div className="budget-label">잔여예산</div>
+          <div className="budget-amount">
+            {totalBudgetNum > 0
+              ? `${remaining.toLocaleString()}원`
+              : "-"}
+          </div>
+        </div>
+        {trip.startDate && trip.endDate && (
+          <div className="budget-item" style={{ textAlign: "right" }}>
+            <div className="budget-label">여행 기간</div>
+            <div className="budget-amount" style={{ fontSize: 11, fontWeight: 500 }}>
+              {trip.startDate.replace(/-/g, ".")} ~ {trip.endDate.replace(/-/g, ".")}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ② 날짜 탭 (달력) */}
       {dateTabs.length > 0 ? (
         <div className="day-tabs">
-          {dateTabs.map((day) => (
-            <div
-              key={day.isoDate}
-              className={`day-col${selectedDate === day.isoDate ? " day-col-active" : ""}`}
-              onClick={() => setSelectedDate(day.isoDate)}
-            >
-              <div className="day-label">{day.label}</div>
-              <div className="day-num">{day.date}</div>
-            </div>
-          ))}
+          {dateTabs.map((day) => {
+            const hasExpense = ((trip?.dailyExpenses || {})[day.isoDate] || []).length > 0;
+            return (
+              <div key={day.isoDate}
+                className={`day-col${selectedDate === day.isoDate ? " day-col-active" : ""}`}
+                onClick={() => handleDateSelect(day.isoDate)}>
+                <div className="day-label">{day.label}</div>
+                <div className="day-num">{day.date}</div>
+                {/* 지출 있는 날 초록 점 표시 */}
+                {hasExpense && (
+                  <div style={{
+                    width: 5, height: 5, borderRadius: "50%",
+                    background: "#10b981", marginTop: 2,
+                  }} />
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="day-tabs">
@@ -744,96 +841,152 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
         </div>
       )}
 
+      {/* ③ 선택된 날짜 배지 (달력 아래) */}
       {selectedDate && (
         <div className="selected-date-badge">
           📅 {selectedDate.replace(/-/g, ".")} 지출 내역
         </div>
       )}
 
-      <div className="budget-summary">
-        <div className="budget-item">
-          <div className="budget-label">전체예산</div>
-          <div className="budget-amount">{budgetLabel}</div>
-        </div>
-        <div className="budget-item">
-          <div className="budget-label">잔여예산</div>
-          <div className="budget-amount">-</div>
-        </div>
-        {trip.startDate && trip.endDate && (
-          <div className="budget-item" style={{ textAlign: "right" }}>
-            <div className="budget-label">여행 기간</div>
-            <div className="budget-amount" style={{ fontSize: 11, fontWeight: 500 }}>
-              {trip.startDate.replace(/-/g, ".")} {" ~ "} {trip.endDate.replace(/-/g, ".")}
-            </div>
-          </div>
-        )}
-      </div>
-
+      {/* ④ 카테고리 필터 */}
       <div className="category-filter-row">
         {CATEGORIES.map((category) => (
-          <button
-            key={category}
+          <button key={category}
             className={`cat-filter-btn${activeCategory === category ? " active" : ""}`}
-            onClick={() => setActiveCategory(category)}
-          >
+            onClick={() => setActiveCategory(category)}>
             {category}
           </button>
         ))}
       </div>
 
+      {/* ⑤ 정렬 / 수입·지출 필터 */}
       <div className="sort-filter-row">
-        <select
-          className="sort-select"
-          value={sortOrder}
-          onChange={(e) => setSortOrder(e.target.value)}
-        >
+        <select className="sort-select" value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}>
           <option value="latest">최신순</option>
           <option value="oldest">오래된순</option>
           <option value="high">금액 높은순</option>
           <option value="low">금액 낮은순</option>
         </select>
-
         <div className="amount-filter-group">
-          {[
-            { value: "all", label: "전체" },
-            { value: "expense", label: "지출" },
-            { value: "income", label: "수입" },
-          ].map(({ value, label }) => (
-            <button
-              key={value}
-              className={`amount-filter-btn${amountFilter === value ? " active" : ""}`}
-              onClick={() => setAmountFilter(value)}
-            >
-              {label}
-            </button>
-          ))}
+          {[{ value: "all", label: "전체" }, { value: "expense", label: "지출" }, { value: "income", label: "수입" }]
+            .map(({ value, label }) => (
+              <button key={value}
+                className={`amount-filter-btn${amountFilter === value ? " active" : ""}`}
+                onClick={() => setAmountFilter(value)}>
+                {label}
+              </button>
+            ))}
         </div>
       </div>
 
+      {/* ⑥ 지출 목록 or 입력 폼 */}
       <div className="expense-scroll">
-        {filteredExpenses.length === 0 ? (
+
+        {/* ── 날짜 미선택 상태 ── */}
+        {!selectedDate && (
           <div className="expense-empty">
-            <div>등록된 지출이 없습니다</div>
+            <div>📅 날짜를 선택하세요</div>
             <div style={{ fontSize: 12, color: "#bbb", marginTop: 4 }}>
-              수정 버튼을 눌러 추가해주세요
+              위 달력에서 날짜를 탭하면 지출을 입력할 수 있어요
             </div>
           </div>
-        ) : (
-          filteredExpenses.map((expense) => (
-            <div key={expense.id} className="expense-item">
-              <div>
-                <div className="expense-label">{expense.label}</div>
-                <div className="expense-sub">{expense.category}</div>
-              </div>
-              <div className={`expense-amount ${expense.amount < 0 ? "red-text" : "green-text"}`}>
-                {expense.amount < 0 ? "-" : "+"}
-                {Math.abs(expense.amount).toLocaleString()}
-              </div>
+        )}
+
+        {/* ── 날짜 선택 & 입력 모드 ── */}
+        {selectedDate && isDailyInputMode && (
+          <div className="daily-input-form">
+            <div className="daily-input-header">
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>
+                금액 등록
+              </span>
+              <span style={{ fontSize: 12, color: "#10b981", cursor: "pointer" }}
+                onClick={addDailyItem}>
+                + 항목 추가
+              </span>
             </div>
-          ))
+
+            {dailyInputItems.map((item, index) => (
+              <div key={index} className="daily-input-row">
+                {/* 카테고리 선택 */}
+                <select className="input-field daily-select"
+                  value={item.category}
+                  onChange={(e) => handleDailyItemChange(index, "category", e.target.value)}>
+                  {["식비", "교통", "숙박", "관광", "쇼핑", "기타"].map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+
+                {/* 금액 입력 */}
+                <div className="daily-amount-wrap">
+                  <input className="input-field daily-amount-input"
+                    type="number" placeholder="금액"
+                    value={item.amount}
+                    onChange={(e) => handleDailyItemChange(index, "amount", e.target.value)} />
+                  <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 4 }}>원</span>
+                </div>
+
+                {/* 삭제 버튼 (첫 번째 항목은 숨김) */}
+                {dailyInputItems.length > 1 && (
+                  <button onClick={() => removeDailyItem(index)}
+                    style={{ background: "none", border: "none", color: "#f87171",
+                      cursor: "pointer", fontSize: 16, padding: "0 4px" }}>
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button className="daily-cancel-btn"
+                onClick={() => setIsDailyInputMode(false)}>
+                취소
+              </button>
+              <button className="daily-save-btn" onClick={saveDailyExpenses}>
+                저장
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── 날짜 선택 & 지출 목록 ── */}
+        {selectedDate && !isDailyInputMode && (
+          <>
+            {filteredExpenses.length === 0 ? (
+              <div className="expense-empty">
+                <div>아직 입력된 예산이 없어요...</div>
+                <div style={{ fontSize: 12, color: "#bbb", marginTop: 4 }}>
+                  아래 + 버튼을 눌러 지출을 추가해보세요
+                </div>
+                <button className="daily-add-btn" onClick={() => setIsDailyInputMode(true)}>
+                  + 금액 입력하기
+                </button>
+              </div>
+            ) : (
+              <>
+                {filteredExpenses.map((expense) => (
+                  <div key={expense.id} className="expense-item">
+                    <div>
+                      <div className="expense-label">{expense.label}</div>
+                      <div className="expense-sub">{expense.category}</div>
+                    </div>
+                    <div className={`expense-amount ${expense.amount < 0 ? "red-text" : "green-text"}`}>
+                      {expense.amount < 0 ? "-" : "+"}
+                      {Math.abs(expense.amount).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+                {/* 해당 날짜에 지출 추가 버튼 */}
+                <button className="daily-more-btn" onClick={() => setIsDailyInputMode(true)}>
+                  + 이 날 지출 추가
+                </button>
+              </>
+            )}
+          </>
         )}
       </div>
 
+      {/* ⑦ 하단 버튼 */}
       <div className="detail-bottom-btns">
         <button className="detail-action-btn stats-btn" onClick={() => onNavigate("stats")}>
           📊 통계
@@ -855,7 +1008,7 @@ function ExpenseListScreen({ onNavigate }) {
     <div className="screen expense-list-screen">
       <div className="detail-header">
         <span className="home-icon" onClick={() => onNavigate("home")}>
-          🏠
+          ⌂
         </span>
         <span className="detail-title">지출 목록</span>
         <span className="menu-icon">☰</span>
