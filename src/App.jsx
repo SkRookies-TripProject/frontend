@@ -611,7 +611,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
     return (
       <div className="screen trip-detail-screen">
         <div className="detail-header">
-          <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
+          <span className="home-icon" onClick={() => onNavigate("home")}>⌂</span>
           <span className="detail-title">여행을 선택해주세요</span>
         </div>
         <p style={{ padding: "24px", color: "#888", textAlign: "center" }}>
@@ -743,7 +743,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
     <div className="screen trip-detail-screen">
       {/* 헤더 */}
       <div className="detail-header">
-        <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
+        <span className="home-icon" onClick={() => onNavigate("home")}>⌂</span>
         <div className="detail-title-wrapper"
           style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, justifyContent: "center" }}>
           {trip.flag && trip.flag.startsWith("http") ? (
