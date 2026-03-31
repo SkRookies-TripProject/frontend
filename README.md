@@ -11,7 +11,6 @@
 - React Router DOM
 
 ## 📂 프로젝트 구조
-
 ```
 src
 ├ api          // axios, API 요청 관리

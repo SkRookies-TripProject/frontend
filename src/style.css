@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+/* ============================================================
+   @layer components — 재사용 컴포넌트 클래스
+   ============================================================ */
+@layer components {
+
+    /* ── 버튼 기본 ── */
+    .btn {
+        @apply inline-block px-5 py-2.5 font-semibold rounded-md text-sm text-white
+               border-none cursor-pointer transition-all duration-300
+               hover:-translate-y-0.5 hover:shadow-md;
+    }
+
+    /* 소형 버튼 */
+    .btn-sm {
+        @apply px-3 py-1.5 text-xs rounded;
+    }
+
+    /* 버튼 색상 변형 */
+    .btn-primary   { @apply bg-blue-500    hover:bg-blue-600; }
+    .btn-success   { @apply bg-emerald-500 hover:bg-emerald-600; } /* 연두색 */
+    .btn-danger    { @apply bg-red-500     hover:bg-red-600; }
+    .btn-warning   { @apply bg-amber-400   hover:bg-amber-500; }
+    .btn-info      { @apply bg-sky-500     hover:bg-sky-600; }
+    .btn-secondary { @apply bg-slate-500   hover:bg-slate-600; }
+
+    /* 버튼 그룹 / 카드 하단 */
+    .actions {
+        @apply flex gap-2 items-center;
+    }
+
+    /* 입력 폼 */
+    .input {
+        @apply w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500;
+    }
+
+    /* 카드 컴포넌트 */
+    .card {
+        @apply bg-white rounded-lg shadow-md p-4 cursor-pointer transition-transform duration-200 hover:-translate-y-1;
+    }
+
+    /* 통계 차트 색상 */
+    .chart-emerald { @apply bg-emerald-500; }
+    .chart-blue   { @apply bg-blue-500; }
+    .chart-red    { @apply bg-red-500; }
+    .chart-pink   { @apply bg-pink-400; }
+}
+
+/* ============================================================
+   @layer base — 기본 스타일
+   ============================================================ */
+@layer base {
+    body {
+        @apply bg-slate-50 font-sans text-slate-800;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        @apply font-semibold text-slate-900;
+    }
+
+    /* 테이블/카드 기본 */
+    tbody td {
+        @apply text-slate-700 px-4 py-3 border-b border-slate-100 align-middle;
+    }
+
+    tbody tr {
+        @apply transition-colors;
+    }
+    tbody tr:hover {
+        @apply bg-slate-50;
+    }
+
+    /* 카드 목록 */
+    .card-list {
+        @apply grid grid-cols-2 gap-4 p-4;
+    }
+
+    /* 폼 페이지 */
+    .form-container {
+        @apply max-w-md mx-auto p-6 bg-white rounded-lg shadow-md;
+    }
+
+    /* 헤더 */
+    header {
+        @apply flex justify-between items-center p-4 bg-white shadow-sm;
+    }
+}
+
+/* ============================================================
+   JS 상태 제어
+   ============================================================ */
+.tab-button.active {
+    @apply text-emerald-500 border-emerald-500;
+}
+
+.content-section { display: none; }
+.content-section.active {
+    display: block;
+    animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.alert {
+    display: none;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: opacity 0.5s cubic-bezier(0.68,-0.55,0.27,1.55),
+                transform 0.5s cubic-bezier(0.68,-0.55,0.27,1.55);
+}
+.alert.show {
+    display: block;
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.loading { display: none; }
