@@ -64,13 +64,6 @@
   justify-content: center;
 }
 
-.trip-card-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
 .trip-card-flag {
   font-size: 40px;
   line-height: 1;
@@ -179,34 +172,6 @@
 .edit-btn-main {
   background: #2ecc71;
   color: #fff;
-}
-/* ─── 여행상세: 정렬·필터 행 ──────────────────────────────────────────────── */
-
-.sort-filter-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 14px 8px;
-  flex-shrink: 0;
-  gap: 8px;
-  border-bottom: 1px solid var(--gray-100);
-}
-
-/* 정렬 select */
-.sort-select {
-  border: 1.5px solid var(--gray-200);
-  border-radius: 8px;
-  padding: 5px 10px;
-  font-size: 12px;
-  font-family: 'Noto Sans KR', sans-serif;
-  color: var(--gray-700);
-  background: #fff;
-  cursor: pointer;
-  outline: none;
-  flex-shrink: 0;
-}
-.sort-select:focus {
-  border-color: var(--green);
 }
 
 /* ─── 수정 모드 폼 ─────────────────────────────────────────────────────────── */
@@ -720,7 +685,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 0 14px 16px;
+  padding: 0 14px 14px;
   gap: 0;
 }
 
@@ -735,7 +700,7 @@ body {
 
 /* ── 유저 배너 ── */
 .home-banner {
-  background: #2ecc71;
+  background: var(--green);
   border-radius: 14px;
   padding: 16px 18px;
   margin-bottom: 14px;
@@ -761,7 +726,7 @@ body {
   gap: 12px;
   flex: 1;
   overflow-y: auto;
-  padding: 4px 0 12px;
+  padding-bottom: 12px;
   /* 스크롤바 숨김 */
   scrollbar-width: none;
   align-content: start;  /* 카드가 적어도 위에서부터 채움 */
@@ -770,36 +735,36 @@ body {
 
 /* ── 카드 ── */
 .trip-card {
-  background: #f5f5f5;
-  border-radius: 14px;
+  background: var(--gray-50);
+  border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
-  border: none;
-  transition: transform 0.15s, box-shadow 0.15s;
+  border: 1.5px solid var(--gray-200);
+  transition: border-color 0.2s, box-shadow 0.2s;
   display: flex;
   flex-direction: column;
   /* 카드 전체 높이 고정 */
-  height: auto;
+  height: 190px;
 }
 
 .trip-card:hover {
-  border-color: transparent;
-  box-shadow: none;
+  border-color: var(--green);
+  box-shadow: 0 2px 12px rgba(62,207,142,0.15);
 }
 
 /* 썸네일 — 남은 공간 채우되 넘치지 않음 */
 .trip-card-thumb {
   flex: 1;
   min-height: 0;
-  background: #e8e8e8;
+  background: var(--gray-200);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .trip-card-flag {
-  font-size: 40px;
+  font-size: 42px;
   line-height: 1;
 }
 
@@ -812,363 +777,19 @@ body {
 .trip-card-name {
   font-size: 13px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--gray-800);
   margin-bottom: 3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.trip-card-budget { font-size: 11px; color: #888; }
+.trip-card-budget { font-size: 11px; color: var(--gray-400); }
 
-
-.trip-review-link {
-  margin-top: 8px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--green);
-  font-size: 12px;
-  font-weight: 600;
-  font-family: 'Noto Sans KR', sans-serif;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-}
-
-.trip-review-plus {
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  border: 1px solid rgba(62, 207, 142, 0.45);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  line-height: 1;
-}
-
-.trip-journal-screen {
-  padding: 12px 14px 16px;
-  gap: 14px;
-}
-
-.journal-shell {
-  background: #fff;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  overflow: visible;
-}
-
-.journal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 0 10px;
-}
-
-.journal-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--gray-900);
-}
-
-.journal-days {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 2px;
-  padding: 0 0 12px;
-}
-
-.journal-days.compact {
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 0;
-}
-
-.journal-day-btn {
-  border: none;
-  background: transparent;
-  border-radius: 12px;
-  padding: 8px 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  color: var(--gray-700);
-}
-
-.journal-days.compact .journal-day-btn {
-  min-width: 0;
-  padding: 6px 0;
-  border-radius: 10px;
-}
-
-.journal-day-btn.active {
-  background: var(--green-light);
-  color: var(--green-dark);
-}
-
-.journal-day-label {
-  font-size: 12px;
-}
-
-.journal-days.compact .journal-day-label {
-  font-size: 11px;
-}
-
-.journal-day-date {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.journal-days.compact .journal-day-date {
-  font-size: 12px;
-}
-
-.journal-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.journal-empty-state {
-  flex: 1;
-}
-
-.journal-entry-list {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding-top: 18px;
-}
-
-.journal-entry-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 16px 14px;
-  box-shadow: 0 4px 10px rgba(17, 24, 39, 0.18);
-  border: none;
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
-}
-
-.journal-entry-top {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.journal-entry-date {
-  font-size: 14px;
-  color: #333;
-}
-
-.journal-entry-tag {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-}
-
-.journal-entry-memo {
-  margin-top: 10px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--gray-700);
-  white-space: pre-wrap;
-}
-
-.journal-entry-image {
-  width: 100%;
-  margin-top: 12px;
-  border-radius: 12px;
-  display: block;
-  object-fit: cover;
-}
-
-.journal-entry-detail {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-top: 18px;
-}
-
-.journal-entry-detail-date {
-  font-size: 15px;
-  font-weight: 600;
-  color: #333;
-}
-
-.journal-entry-detail-image {
-  width: 100%;
-  max-height: 320px;
-  border-radius: 14px;
-  display: block;
-  object-fit: contain;
-  background: #f7f7f7;
-}
-
-.journal-entry-detail-images {
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scroll-snap-type: x proximity;
-}
-
-.journal-entry-detail-images .journal-entry-detail-image {
-  flex: 0 0 100%;
-  scroll-snap-align: start;
-}
-
-.journal-entry-detail-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 16px 14px;
-  box-shadow: 0 4px 10px rgba(17, 24, 39, 0.12);
-}
-
-.journal-entry-detail-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--gray-700);
-  margin-bottom: 10px;
-}
-
-.journal-entry-detail-memo {
-  font-size: 14px;
-  line-height: 1.7;
-  color: #333;
-  white-space: pre-wrap;
-}
-
-.journal-field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.journal-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--gray-700);
-}
-
-.journal-textarea {
-  width: 100%;
-  min-height: 170px;
-  border: 1.5px solid var(--gray-200);
-  border-radius: 14px;
-  background: var(--gray-50);
-  padding: 14px;
-  resize: none;
-  outline: none;
-  font-size: 13px;
-  line-height: 1.6;
-  font-family: 'Noto Sans KR', sans-serif;
-  color: var(--gray-700);
-}
-
-.journal-textarea:focus {
-  border-color: var(--green);
-  background: #fff;
-}
-
-.journal-textarea-small {
-  min-height: 120px;
-}
-
-.journal-image-box {
-  /* 후기 이미지 업로드 영역의 기본 박스 */
-  width: 100%;
-  min-height: 170px;
-  border: 1.5px solid var(--gray-200);
-  border-radius: 14px;
-  background: var(--gray-50);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.journal-image-input {
-  display: none;
-}
-
-.journal-image-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--gray-400);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.journal-image-plus {
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  border: 1px solid rgba(62, 207, 142, 0.45);
-  color: var(--green);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  line-height: 1;
-  background: #fff;
-}
-
-.journal-image-preview-wrap {
-  /* 업로드 후 이미지를 박스 전체에 맞춰 보여주는 래퍼 */
-  width: 100%;
-  height: 100%;
-  min-height: 170px;
-  position: relative;
-}
-
-.journal-image-preview-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  width: 100%;
-  min-height: 170px;
-  padding: 10px;
-}
-
-.journal-image-preview {
-  display: block;
-  width: 100%;
-  height: 160px;
-  object-fit: cover;
-  border-radius: 10px;
-}
-
-.journal-image-change {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  padding: 7px 10px;
-  border-radius: 999px;
-  background: rgba(17, 24, 39, 0.72);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-}
 .hamburger, .filter-icon {
   font-size: 20px;
   cursor: pointer;
-  color: #333;
-
+  color: var(--gray-600);
 }
 
 /* ─── 여행 상세 ─────────────────────────────────────────────────────────────── */
@@ -1635,4 +1256,118 @@ body {
 
   .top-nav { flex-direction: column; gap: 8px; padding: 10px 16px; }
   .nav-links { justify-content: center; }
+}
+
+/* ─── 일별 지출 입력 폼 ──────────────────────────────────────────────────────── */
+
+.daily-input-form {
+  padding: 14px 16px;
+  background: var(--gray-50);
+  border-radius: 12px;
+  margin: 8px 0;
+  border: 1.5px solid var(--gray-200);
+}
+
+.daily-input-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.daily-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.daily-select {
+  flex: 1;
+  padding: 8px 10px !important;
+  font-size: 13px !important;
+  min-width: 0;
+}
+
+.daily-amount-wrap {
+  display: flex;
+  align-items: center;
+  flex: 1.5;
+  min-width: 0;
+}
+
+.daily-amount-input {
+  flex: 1;
+  padding: 8px 10px !important;
+  font-size: 13px !important;
+}
+
+.daily-cancel-btn {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 10px;
+  border: 1.5px solid var(--gray-300);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-500);
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: background 0.15s;
+}
+.daily-cancel-btn:hover { background: var(--gray-100); }
+
+.daily-save-btn {
+  flex: 2;
+  padding: 10px 0;
+  border-radius: 10px;
+  border: none;
+  background: var(--green);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: background 0.15s;
+}
+.daily-save-btn:hover { background: var(--green-dark); }
+
+/* 지출 없을 때 "+ 금액 입력하기" 버튼 */
+.daily-add-btn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 0;
+  border-radius: 10px;
+  border: 1.5px dashed var(--green);
+  background: var(--green-light);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--green-dark);
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: background 0.15s;
+}
+.daily-add-btn:hover { background: #c6f2e3; }
+
+/* 지출 있을 때 날짜에 추가하는 버튼 */
+.daily-more-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 0;
+  border-radius: 10px;
+  border: 1.5px dashed var(--gray-300);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-500);
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: all 0.15s;
+}
+.daily-more-btn:hover {
+  border-color: var(--green);
+  color: var(--green-dark);
+  background: var(--green-light);
 }
