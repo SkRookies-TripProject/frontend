@@ -927,9 +927,7 @@ body {
 } */ */
  /* 통계 전체 */
 .stats-screen {
-  padding: 20px 16px 40px;
   background: #f8f8f8;
-  min-height: 100vh;
 }
 
 /* 날짜 박스 */
