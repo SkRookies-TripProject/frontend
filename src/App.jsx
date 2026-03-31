@@ -1,5 +1,6 @@
 import { useState } from "react";
-import "./App.css";
+import "./app.css";
+import StatsScreen from "./pages/StatsScreen";
 
 // ─── 공통 컴포넌트 ───────────────────────────────────────────────────────────
 
@@ -560,55 +561,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
 }
 
 // ─── 화면 7: 통계 ────────────────────────────────────────────────────────────
-
-function StatsScreen({ onNavigate }) {
-  const stats = [
-    { label: "숙박비", amount: "₩150,000", pct: "42%", color: "#a78bfa" },
-    { label: "쇼핑",   amount: "₩150,000", pct: "42%", color: "#f87171" },
-    { label: "식비",   amount: "₩150,000", pct: "42%", color: "#34d399" },
-  ];
-  return (
-    <div className="screen stats-screen">
-      <div className="detail-header">
-        <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
-        <span className="detail-title">대한민국(통계)</span>
-        <span className="menu-icon">☰</span>
-      </div>
-      <div className="day-tabs">
-        {["월", "화", "수", "목"].map((d, i) => (
-          <div key={d} className="day-col">
-            <div className="day-label">{d}</div>
-            <div className="day-num">{[30, 31, 1, 2][i]}</div>
-          </div>
-        ))}
-      </div>
-      <div className="budget-summary">
-        <div className="budget-item">
-          <div className="budget-label">전체예산</div>
-          <div className="budget-amount">400,000</div>
-        </div>
-        <div className="budget-item">
-          <div className="budget-label">잔여예산</div>
-          <div className="budget-amount">250,000</div>
-        </div>
-      </div>
-      <div className="stats-date-range">3월 30일 ~ 4월 2일 카테고리</div>
-      <div className="donut-wrapper">
-        <div className="donut"></div>
-      </div>
-      <div className="stats-legend">
-        {stats.map((s) => (
-          <div key={s.label} className="legend-row">
-            <span className="legend-dot" style={{ background: s.color }}></span>
-            <span className="legend-label">{s.label}</span>
-            <span className="legend-amount">{s.amount}</span>
-            <span className="legend-pct">{s.pct}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+// import pages/StatsScreen.jsx 해서 이 부분은 생략 가능
 
 // ─── 화면 8: 지출 목록 ───────────────────────────────────────────────────────
 
@@ -717,7 +670,13 @@ export default function App() {
       case "tripDetail":
         return <TripDetailScreen onNavigate={navigate} trip={selectedTrip} onUpdateTrip={handleUpdateTrip} />;
       case "stats":
-        return <StatsScreen onNavigate={navigate} />;
+      return (
+        <StatsScreen
+          onNavigate={navigate}
+          trip={selectedTrip}
+          expenses={DUMMY_EXPENSES}
+        />
+      );
       case "expenseList":
         return <ExpenseListScreen onNavigate={navigate} />;
       default:
