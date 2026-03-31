@@ -2,6 +2,7 @@ import { useState } from "react";
 import "./app.css";
 import countries from 'i18n-iso-countries';
 import ko from 'i18n-iso-countries/langs/ko.json';
+import AdminPage from "./pages/AdminPage";
 
 countries.registerLocale(ko);
 
@@ -827,10 +828,24 @@ export default function App() {
       );
       case "expenseList":
         return <ExpenseListScreen onNavigate={navigate} />;
+      case "admin":
+        return <AdminPage onNavigate={navigate} />;
       default:
         return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
     }
   };
+  // 🔥 관리자면 완전히 분리
+  if (screen === "admin") {
+    return (
+      <div className="min-h-screen w-full bg-gray-100">
+        <nav className="top-nav">
+          <div className="nav-logo">✈ TripBudget</div>
+        </nav>
+
+         <AdminPage onNavigate={navigate} />
+      </div>
+    );
+  }
 
   return (
     <div className="app-root">
@@ -845,6 +860,7 @@ export default function App() {
             ["tripDetail",  "여행상세"],
             ["stats",       "통계"],
             ["expenseList", "지출목록"],
+            ["admin", "관리자"],
           ].map(([key, label]) => (
             <button
               key={key}
@@ -857,15 +873,25 @@ export default function App() {
         </div>
       </nav>
 
+<<<<<<< HEAD
       <div className="canvas">
         <div className="phone-mockup">
           <div className="phone-notch"></div>
           <div className="phone-inner">
             {renderScreen()}
+=======
+      {/* 폰 목업 */}
+        <div className="canvas">
+          <div className="phone-mockup">
+            <div className="phone-notch"></div>
+            <div className="phone-inner">
+              {renderScreen()}
+            </div>
+            <div className="phone-home-bar"></div>
+>>>>>>> feature/admin-page
           </div>
-          <div className="phone-home-bar"></div>
         </div>
-      </div>
+
     </div>
   );
 }
