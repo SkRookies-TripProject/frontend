@@ -84,3 +84,59 @@ export function buildCategoryStats(expenses = []) {
     color: CATEGORY_COLORS[label] || "#cbd5e1",
   }));
 }
+export function buildMonthlyExpenseCalendar(startDate, endDate, expenses = []) {
+  if (!startDate || !endDate) return null;
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  const year = start.getFullYear();
+  const month = start.getMonth() + 1;
+
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDate = new Date(year, month, 0).getDate();
+  const startWeekday = firstDay.getDay();
+
+  const amountMap = new Map();
+
+  expenses.forEach((expense) => {
+    if (!expense.expenseDate) return;
+    const key = expense.expenseDate;
+    const current = amountMap.get(key) || 0;
+    amountMap.set(key, current + Math.abs(Number(expense.amount || 0)));
+  });
+
+  const cells = [];
+
+  for (let i = 0; i < startWeekday; i++) {
+    cells.push({
+      isEmpty: true,
+    });
+  }
+
+  for (let day = 1; day <= lastDate; day++) {
+    const dateObj = new Date(year, month - 1, day);
+    const yyyy = dateObj.getFullYear();
+    const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const dd = String(dateObj.getDate()).padStart(2, "0");
+    const dateKey = `${yyyy}-${mm}-${dd}`;
+
+    const inTrip = dateObj >= start && dateObj <= end;
+
+    cells.push({
+      isEmpty: false,
+      year,
+      month,
+      day,
+      dateKey,
+      inTrip,
+      amount: inTrip ? (amountMap.get(dateKey) || 0) : 0,
+    });
+  }
+
+  return {
+    year,
+    month,
+    cells,
+  };
+}

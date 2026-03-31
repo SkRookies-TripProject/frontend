@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./app.css";
+import StatsScreen from "./pages/StatsScreen";
 
 // ─── 공통 컴포넌트 ───────────────────────────────────────────────────────────
 
@@ -16,8 +17,8 @@ function GreenButton({ children, onClick, fullWidth }) {
 
 // ─── 화면 1: 로그인 ──────────────────────────────────────────────────────────
 
-function LoginScreen({ onNavigate }) {
-  const [id, setId] = useState("");
+function LoginScreen({ onNavigate, onLogin }) {
+  const [name, setName] = useState("");
   const [pw, setPw] = useState("");
   return (
     <div className="screen login-screen">
@@ -28,9 +29,9 @@ function LoginScreen({ onNavigate }) {
       <div className="form-group">
         <input
           className="input-field"
-          placeholder="아이디 입력"
-          value={id}
-          onChange={(e) => setId(e.target.value)}
+          placeholder="이름 입력"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
         <input
           className="input-field"
@@ -41,8 +42,10 @@ function LoginScreen({ onNavigate }) {
         />
         <p className="find-link">8자 이상 입력하세요</p>
       </div>
-      {/* 로그인 완료 시 "afterLogin" 이벤트 발생 → App에서 trips 유무 체크 */}
-      <GreenButton fullWidth onClick={() => onNavigate("afterLogin")}>
+      <GreenButton fullWidth onClick={() => {
+        onLogin(name.trim() || "관리자");
+        onNavigate("afterLogin");
+      }}>
         로그인
       </GreenButton>
       <p className="sub-link">
@@ -57,22 +60,38 @@ function LoginScreen({ onNavigate }) {
 
 // ─── 화면 2: 회원가입 ────────────────────────────────────────────────────────
 
-function RegisterScreen({ onNavigate }) {
+function RegisterScreen({ onNavigate, onLogin }) {
+  const [fields, setFields] = useState({ name: "", email: "", id: "", pw: "", pw2: "" });
+  const placeholders = ["사용자 이름", "이메일 입력", "아이디 입력", "비밀번호 입력"];
+  const keys = ["name", "email", "id", "pw"];
   return (
     <div className="screen register-screen">
       <h1 className="register-title">회원가입</h1>
       <div className="form-group">
-        {["사용자 이름", "이메일 입력", "아이디 입력", "비밀번호 입력"].map(
-          (ph) => (
-            <input key={ph} className="input-field" placeholder={ph} />
-          )
-        )}
+        {keys.map((k, i) => (
+          <input
+            key={k}
+            className="input-field"
+            placeholder={placeholders[i]}
+            type={k === "pw" ? "password" : "text"}
+            value={fields[k]}
+            onChange={(e) => setFields((f) => ({ ...f, [k]: e.target.value }))}
+          />
+        ))}
         <p className="find-link">8자 이상 입력하세요</p>
-        <input className="input-field" placeholder="비밀번호 재입력" />
+        <input
+          className="input-field"
+          placeholder="비밀번호 재입력"
+          type="password"
+          value={fields.pw2}
+          onChange={(e) => setFields((f) => ({ ...f, pw2: e.target.value }))}
+        />
         <p className="find-link">비밀번호를 확인하세요</p>
       </div>
-      {/* 회원가입 완료 시도 "afterLogin" 이벤트 발생 → 신규 유저이므로 항상 온보딩으로 감 */}
-      <GreenButton fullWidth onClick={() => onNavigate("afterLogin")}>
+      <GreenButton fullWidth onClick={() => {
+        onLogin(fields.name.trim() || "관리자");
+        onNavigate("afterLogin");
+      }}>
         회원가입/로그인
       </GreenButton>
       <p className="sub-link">
@@ -90,7 +109,10 @@ function RegisterScreen({ onNavigate }) {
 function OnboardingScreen({ onNavigate }) {
   return (
     <div className="screen onboarding-screen">
-      <img src="/src/img/logo.png" alt="logo" className="logo" />
+      <div className="logo-wrapper">
+        <img src="/src/img/logo.png" alt="logo" className="logo" />
+      </div>
+      <div className="onboarding-logo">Logo</div>
       <h2 className="onboarding-title">
         여행을 추가하고
         <br />
@@ -131,11 +153,12 @@ const COUNTRIES = [
   { flag: "🇬🇷", name: "그리스" },
   { flag: "🇵🇹", name: "포르투갈" },
 ];
+
 // ─── 화면 4: 여행 생성 ───────────────────────────────────────────────────────
 
 function CreateTripScreen({ onNavigate, onAddTrip }) {
   const [tripName, setTripName] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[1]); // 미국 기본값
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]); // 한국 기본값
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [budget, setBudget] = useState("");
@@ -219,9 +242,7 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
         />
 
         {/* 예산 */}
-        <div className="form-label">총 예산</div>
-        <input className="input-field" value={budget} onChange={(e) => setBudget(e.target.value)} />
-
+        <div className="form-label" style={{ marginTop: 16 }}>예산</div>
         <input
           className="input-field"
           placeholder="예) 1000000"
@@ -246,14 +267,22 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
 
 // ─── 화면 5: 홈(여행 목록) ───────────────────────────────────────────────────
 
-function HomeScreen({ trips, onNavigate, onSelectTrip }) {
+function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
   return (
     <div className="screen home-screen">
+      {/* 상단 아이콘 헤더 */}
       <div className="home-header">
         <span className="filter-icon" onClick={() => onNavigate("tripFilter")}>⊟</span>
         <span className="hamburger">☰</span>
       </div>
 
+      {/* ✈ 유저 배너 */}
+      <div className="home-banner">
+        <div className="home-banner-title">✈ {userName} 님의 여행기록</div>
+        <div className="home-banner-sub">지금까지의 여행을 한눈에 확인해보세요</div>
+      </div>
+
+      {/* 여행 카드 그리드 */}
       <div className="trip-grid">
         {trips.map((t) => (
           <div
@@ -264,11 +293,11 @@ function HomeScreen({ trips, onNavigate, onSelectTrip }) {
               onNavigate("tripDetail");
             }}
           >
-            {/* 국기 썸네일 영역 */}
+            {/* 국기 썸네일 — 고정 높이 */}
             <div className="trip-card-thumb">
               <span className="trip-card-flag">{t.flag}</span>
             </div>
-            {/* 텍스트 영역 */}
+            {/* 텍스트 */}
             <div className="trip-card-body">
               <div className="trip-card-name">{t.name}</div>
               <div className="trip-card-budget">{t.budget}</div>
@@ -502,54 +531,54 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
 
 // ─── 화면 7: 통계 ────────────────────────────────────────────────────────────
 
-function StatsScreen({ onNavigate }) {
-  const stats = [
-    { label: "숙박비", amount: "₩150,000", pct: "42%", color: "#a78bfa" },
-    { label: "쇼핑", amount: "₩150,000", pct: "42%", color: "#f87171" },
-    { label: "식비", amount: "₩150,000", pct: "42%", color: "#34d399" },
-  ];
-  return (
-    <div className="screen stats-screen">
-      <div className="detail-header">
-        <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
-        <span className="detail-title">대한민국(통계)</span>
-        <span className="menu-icon">☰</span>
-      </div>
-      <div className="day-tabs">
-        {["월", "화", "수", "목"].map((d, i) => (
-          <div key={d} className="day-col">
-            <div className="day-label">{d}</div>
-            <div className="day-num">{[30, 31, 1, 2][i]}</div>
-          </div>
-        ))}
-      </div>
-      <div className="budget-summary">
-        <div className="budget-item">
-          <div className="budget-label">전체예산</div>
-          <div className="budget-amount">400,000</div>
-        </div>
-        <div className="budget-item">
-          <div className="budget-label">잔여예산</div>
-          <div className="budget-amount">250,000</div>
-        </div>
-      </div>
-      <div className="stats-date-range">3월 30일 ~ 4월 2일 카테고리</div>
-      <div className="donut-wrapper">
-        <div className="donut"></div>
-      </div>
-      <div className="stats-legend">
-        {stats.map((s) => (
-          <div key={s.label} className="legend-row">
-            <span className="legend-dot" style={{ background: s.color }}></span>
-            <span className="legend-label">{s.label}</span>
-            <span className="legend-amount">{s.amount}</span>
-            <span className="legend-pct">{s.pct}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+// function StatsScreen({ onNavigate }) {
+//   const stats = [
+//     { label: "숙박비", amount: "₩150,000", pct: "42%", color: "#a78bfa" },
+//     { label: "쇼핑", amount: "₩150,000", pct: "42%", color: "#f87171" },
+//     { label: "식비", amount: "₩150,000", pct: "42%", color: "#34d399" },
+//   ];
+//   return (
+//     <div className="screen stats-screen">
+//       <div className="detail-header">
+//         <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
+//         <span className="detail-title">대한민국(통계)</span>
+//         <span className="menu-icon">☰</span>
+//       </div>
+//       <div className="day-tabs">
+//         {["월", "화", "수", "목"].map((d, i) => (
+//           <div key={d} className="day-col">
+//             <div className="day-label">{d}</div>
+//             <div className="day-num">{[30, 31, 1, 2][i]}</div>
+//           </div>
+//         ))}
+//       </div>
+//       <div className="budget-summary">
+//         <div className="budget-item">
+//           <div className="budget-label">전체예산</div>
+//           <div className="budget-amount">400,000</div>
+//         </div>
+//         <div className="budget-item">
+//           <div className="budget-label">잔여예산</div>
+//           <div className="budget-amount">250,000</div>
+//         </div>
+//       </div>
+//       <div className="stats-date-range">3월 30일 ~ 4월 2일 카테고리</div>
+//       <div className="donut-wrapper">
+//         <div className="donut"></div>
+//       </div>
+//       <div className="stats-legend">
+//         {stats.map((s) => (
+//           <div key={s.label} className="legend-row">
+//             <span className="legend-dot" style={{ background: s.color }}></span>
+//             <span className="legend-label">{s.label}</span>
+//             <span className="legend-amount">{s.amount}</span>
+//             <span className="legend-pct">{s.pct}</span>
+//           </div>
+//         ))}
+//       </div>
+//     </div>
+//   );
+// }
 
 // ─── 화면 8: 지출 목록 ───────────────────────────────────────────────────────
 
@@ -602,20 +631,21 @@ function ExpenseListScreen({ onNavigate }) {
 
 export default function App() {
   const [screen, setScreen] = useState("login");
-  // trips 상태를 최상위에서 관리
   const [trips, setTrips] = useState([]);
-  // 현재 선택된 여행 ID
   const [selectedTripId, setSelectedTripId] = useState(null);
-  // 이전 화면 기록 (뒤로가기용)
   const [prevScreen, setPrevScreen] = useState("home");
+  // 로그인한 유저 이름 (미로그인 시 "관리자")
+  const [userName, setUserName] = useState("관리자");
+
+  const handleLogin = (name) => {
+    setUserName(name || "관리자");
+  };
 
   const navigate = (dest) => {
-    // 로그인/회원가입 완료 후 trips 유무에 따라 분기
     if (dest === "afterLogin") {
       setScreen(trips.length === 0 ? "onboarding" : "home");
       return;
     }
-    // 뒤로가기
     if (dest === "back") {
       setScreen(prevScreen);
       return;
@@ -624,16 +654,11 @@ export default function App() {
     setScreen(dest);
   };
 
-  // CreateTripScreen에서 호출 — 새 여행 추가 후 홈으로 이동
   const handleAddTrip = (newTrip) => {
-    setTrips((prev) => [
-      ...prev,
-      { id: Date.now(), ...newTrip },
-    ]);
+    setTrips((prev) => [...prev, { id: Date.now(), ...newTrip }]);
     setScreen("home");
   };
 
-  // TripDetailScreen 수정 모드에서 저장 시 호출
   const handleUpdateTrip = (updatedTrip) => {
     setTrips((prev) =>
       prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
@@ -642,18 +667,24 @@ export default function App() {
 
   const renderScreen = () => {
     const selectedTrip = trips.find((t) => t.id === selectedTripId) || null;
-
     switch (screen) {
       case "login":
-        return <LoginScreen onNavigate={navigate} />;
+        return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
       case "register":
-        return <RegisterScreen onNavigate={navigate} />;
+        return <RegisterScreen onNavigate={navigate} onLogin={handleLogin} />;
       case "onboarding":
         return <OnboardingScreen onNavigate={navigate} />;
       case "createTrip":
         return <CreateTripScreen onNavigate={navigate} onAddTrip={handleAddTrip} />;
       case "home":
-        return <HomeScreen trips={trips} onNavigate={navigate} onSelectTrip={setSelectedTripId} />;
+        return (
+          <HomeScreen
+            trips={trips}
+            onNavigate={navigate}
+            onSelectTrip={setSelectedTripId}
+            userName={userName}
+          />
+        );
       case "tripDetail":
         return <TripDetailScreen onNavigate={navigate} trip={selectedTrip} onUpdateTrip={handleUpdateTrip} />;
       case "stats":
@@ -667,7 +698,7 @@ export default function App() {
       case "expenseList":
         return <ExpenseListScreen onNavigate={navigate} />;
       default:
-        return <LoginScreen onNavigate={navigate} />;
+        return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
     }
   };
 
@@ -675,7 +706,7 @@ export default function App() {
     <div className="app-root">
       {/* 상단 내비게이션 (개발용 — 프로덕션에서 제거 가능) */}
       <nav className="top-nav">
-        <div className="nav-logo">✈ CosTrip</div>
+        <div className="nav-logo">✈ TripBudget</div>
         <div className="nav-links">
           {[
             ["login", "로그인"],

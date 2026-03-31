@@ -2,11 +2,13 @@ import BudgetSummary from "../components/stats/BudgetSummary";
 import TripDayTabs from "../components/stats/TripDayTabs";
 import CategoryDonutChart from "../components/stats/CategoryDonutChart";
 import StatsLegend from "../components/stats/StatsLegend";
+import MonthlyExpenseCalendar from "../components/stats/MonthlyExpenseCalendar";
 import {
   buildTripDays,
   buildCategoryStats,
   calculateBudgetSummary,
   formatDateRange,
+  buildMonthlyExpenseCalendar,
 } from "../components/stats/statsUtils";
 
 export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
@@ -15,7 +17,7 @@ export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
       <div className="screen stats-screen">
         <div className="detail-header">
           <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
-          <span className="detail-title">통계</span>
+          <span className="detail-title">여행 통계</span>
           <span className="menu-icon"></span>
         </div>
         <p style={{ padding: 24, textAlign: "center", color: "#888" }}>
@@ -29,6 +31,12 @@ export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
   const stats = buildCategoryStats(expenses);
   const { totalBudget, spentAmount, remainingBudget } = calculateBudgetSummary(
     trip.budget,
+    expenses
+  );
+
+  const calendarData = buildMonthlyExpenseCalendar(
+    trip.startDate,
+    trip.endDate,
     expenses
   );
 
@@ -48,13 +56,15 @@ export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
         remainingBudget={remainingBudget}
       />
 
-      <div className="stats-date-range">
-        {formatDateRange(trip.startDate, trip.endDate)} 카테고리
+      <div className="stats-date-range-box">
+        <span>{formatDateRange(trip.startDate, trip.endDate)}</span>
       </div>
 
       <CategoryDonutChart stats={stats} />
 
       <StatsLegend stats={stats} />
+
+      <MonthlyExpenseCalendar calendarData={calendarData} />
     </div>
   );
 }

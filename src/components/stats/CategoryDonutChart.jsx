@@ -17,19 +17,27 @@ function describeArc(cx, cy, r, startAngle, endAngle) {
   ].join(" ");
 }
 
+function formatCurrency(value) {
+  return `₩${Number(value || 0).toLocaleString("ko-KR")}`;
+}
+
 export default function CategoryDonutChart({ stats = [] }) {
-  const size = 180;
-  const strokeWidth = 24;
+  const size = 250;
+  const strokeWidth = 34;
   const radius = (size - strokeWidth) / 2;
   const center = size / 2;
 
   let currentAngle = 0;
-
   const total = stats.reduce((sum, item) => sum + item.amount, 0);
 
   return (
     <div className="donut-wrapper">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="donut-chart-svg"
+      >
         <circle
           cx={center}
           cy={center}
@@ -52,7 +60,7 @@ export default function CategoryDonutChart({ stats = [] }) {
               fill="none"
               stroke={item.color}
               strokeWidth={strokeWidth}
-              strokeLinecap="round"
+              strokeLinecap="butt"
             />
           );
         })}
@@ -61,7 +69,7 @@ export default function CategoryDonutChart({ stats = [] }) {
           x="50%"
           y="46%"
           textAnchor="middle"
-          fontSize="14"
+          fontSize="16"
           fontWeight="600"
           fill="#374151"
         >
@@ -69,13 +77,13 @@ export default function CategoryDonutChart({ stats = [] }) {
         </text>
         <text
           x="50%"
-          y="56%"
+          y="58%"
           textAnchor="middle"
-          fontSize="16"
-          fontWeight="700"
+          fontSize="28"
+          fontWeight="800"
           fill="#111827"
         >
-          ₩{total.toLocaleString("ko-KR")}
+          {formatCurrency(total)}
         </text>
       </svg>
     </div>
