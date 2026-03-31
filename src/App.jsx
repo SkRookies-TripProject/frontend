@@ -3,6 +3,7 @@ import "./app.css";
 import countries from 'i18n-iso-countries';
 import ko from 'i18n-iso-countries/langs/ko.json';
 import AdminPage from "./pages/AdminPage";
+import StatsScreen from "./pages/StatsScreen";
 
 countries.registerLocale(ko);
 
