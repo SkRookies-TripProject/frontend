@@ -1152,13 +1152,12 @@ export default function App() {
           />
         );
       case "stats":
-        return (
-          <StatsScreen
-            onNavigate={navigate}
-            trip={selectedTrip}
-            expenses={selectedTrip?.expenses || []}
-          />
-        );
+      return (
+        <StatsScreen
+          onNavigate={navigate}
+          trip={selectedTrip}
+        />
+      );
       case "expenseList":
         return <ExpenseListScreen onNavigate={navigate} />;
       case "admin":

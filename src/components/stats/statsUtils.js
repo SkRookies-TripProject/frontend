@@ -9,6 +9,30 @@ const CATEGORY_COLORS = {
   기타: "#94a3b8",
 };
 
+export function getNormalizedExpenses(trip) {
+  if (!trip) return [];
+
+  // 1. dailyExpenses 구조가 있으면 우선 사용
+  if (trip.dailyExpenses && typeof trip.dailyExpenses === "object") {
+    return Object.entries(trip.dailyExpenses).flatMap(([dateKey, items]) =>
+      (items || []).map((item) => ({
+        ...item,
+        expenseDate: item.expenseDate || item.date || dateKey,
+      }))
+    );
+  }
+
+  // 2. 기존 expenses 구조 사용
+  if (Array.isArray(trip.expenses)) {
+    return trip.expenses.map((item) => ({
+      ...item,
+      expenseDate: item.expenseDate || item.date || null,
+    }));
+  }
+
+  return [];
+}
+
 function parseBudgetValue(budget) {
   if (typeof budget === "number") return budget;
   if (!budget) return 0;
