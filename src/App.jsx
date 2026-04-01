@@ -21,10 +21,7 @@ function GreenButton({ children, onClick, fullWidth }) {
 function buildTripDays(trip) {
   if (!trip?.startDate || !trip?.endDate) {
     return [
-      { label: "월", date: 30, fullDate: "3월30일", isoDate: "2026-03-30" },
-      { label: "화", date: 31, fullDate: "3월31일", isoDate: "2026-03-31" },
-      { label: "수", date: 1, fullDate: "4월1일", isoDate: "2026-04-01" },
-      { label: "목", date: 2, fullDate: "4월2일", isoDate: "2026-04-02" },
+      { label: "여행 기간을 등록하지 않았어요" },
     ];
   }
 
@@ -760,7 +757,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   // ── 일반 상세 화면 ─────────────────────────────────────────────────────────
   return (
     <div className="screen trip-detail-screen">
-      {/* 헤더 */}
+      {/* 헤더. */}
       <div className="detail-header">
         <span className="home-icon" onClick={() => onNavigate("home")}>⌂</span>
         <div className="detail-title-wrapper"
@@ -778,7 +775,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
         <span className="menu-icon">☰</span>
       </div>
 
-      {/* ① 전체 예산 요약 (달력 위). */}
+      {/* ① 전체 예산 요약 (달력 위) */}
       <div className="budget-summary">
         <div className="budget-item">
           <div className="budget-label">전체예산</div>
@@ -877,9 +874,9 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
         {/* ── 날짜 미선택 상태 ── */}
         {!selectedDate && (
           <div className="expense-empty">
-            <div>📅 날짜를 선택하세요</div>
+            <div>📅 날짜를 등록해 주세요</div>
             <div style={{ fontSize: 12, color: "#bbb", marginTop: 4 }}>
-              위 달력에서 날짜를 탭하면 지출을 입력할 수 있어요
+              날짜를 등록하면 위 달력에서 날짜를 선택할 수 있어요
             </div>
           </div>
         )}
@@ -933,7 +930,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
                 onClick={() => setIsDailyInputMode(false)}>
                 취소
               </button>
-              <button className="daily-save-btn" onClick={saveDailyExpenses}>
+              <button className="daily-save-btn" onClick={saveDailyExpenses }>
                 저장
               </button>
             </div>
@@ -1081,7 +1078,6 @@ export default function App() {
       prev.map((trip) => (trip.id === updatedTrip.id ? updatedTrip : trip))
     );
     setEditingTrip(null); 
-    setScreen("home");
   };
   
   // 여행 삭제
