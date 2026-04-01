@@ -22,6 +22,17 @@ function buildTripDays(trip) {
   return days;
 }
 
+function formatKoreanTime(dateLike) {
+  if (!dateLike) return "";
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(dateLike));
+}
+
 export default function TripJournalScreen({
   onNavigate,
   trip,
@@ -81,12 +92,15 @@ export default function TripJournalScreen({
     }
 
     // 사용자가 작성한 메모와 이미지를 날짜별 후기 기록으로 저장
+    const createdAt = new Date().toISOString();
     const nextEntry = {
       id: Date.now(),
       dayIndex: selectedDay,
       dateText: selectedDayInfo?.fullDate ?? "",
       memo: memo.trim(),
       imagePreviews: reviewImages.map((image) => image.preview),
+      createdAt,
+      createdTimeText: formatKoreanTime(createdAt),
     };
 
     onUpdateTrip?.({
@@ -100,6 +114,28 @@ export default function TripJournalScreen({
     setReviewImages([]);
     setIsWriting(false);
     setSelectedEntryId(null);
+  };
+
+  const handleDeleteDetailImage = (imageIndex) => {
+    if (!selectedEntry) return;
+
+    const nextImagePreviews = (selectedEntry.imagePreviews ?? []).filter(
+      (_, index) => index !== imageIndex
+    );
+    const nextEntries = reviewEntries.map((entry) =>
+      entry.id === selectedEntry.id
+        ? { ...entry, imagePreviews: nextImagePreviews }
+        : entry
+    );
+
+    onUpdateTrip?.({
+      ...trip,
+      journalEntries: nextEntries,
+      coverImage:
+        trip.coverImage === selectedEntry.imagePreviews?.[imageIndex]
+          ? nextImagePreviews[0] || ""
+          : trip.coverImage,
+    });
   };
 
   return (
@@ -178,16 +214,32 @@ export default function TripJournalScreen({
       ) : selectedEntry ? (
         // 기록 목록에서 선택한 메모의 상세 보기 화면
         <div className="journal-entry-detail">
-          <div className="journal-entry-detail-date">{selectedEntry.dateText}</div>
+          <div className="journal-entry-detail-date-row">
+            <div className="journal-entry-detail-date">{selectedEntry.dateText}</div>
+            <div className="journal-entry-time">
+              {selectedEntry.createdTimeText || formatKoreanTime(selectedEntry.createdAt)}
+            </div>
+          </div>
           {selectedEntry.imagePreviews?.length ? (
             <div className="journal-entry-detail-images">
               {selectedEntry.imagePreviews.map((imagePreview, index) => (
-                <img
+                <div
                   key={`${selectedEntry.id}-${index}`}
-                  src={imagePreview}
-                  alt={`기록 이미지 ${index + 1}`}
-                  className="journal-entry-detail-image"
-                />
+                  className="journal-entry-detail-image-card"
+                >
+                  <button
+                    type="button"
+                    className="journal-entry-image-delete"
+                    onClick={() => handleDeleteDetailImage(index)}
+                  >
+                    삭제
+                  </button>
+                  <img
+                    src={imagePreview}
+                    alt={`기록 이미지 ${index + 1}`}
+                    className="journal-entry-detail-image"
+                  />
+                </div>
               ))}
             </div>
           ) : null}
@@ -214,6 +266,9 @@ export default function TripJournalScreen({
               <div className="journal-entry-top">
                 <span className="journal-entry-date">{entry.dateText}</span>
                 <span className="journal-entry-tag">{entry.memo || "메모 없음"}</span>
+              </div>
+              <div className="journal-entry-time">
+                {entry.createdTimeText || formatKoreanTime(entry.createdAt)}
               </div>
             </button>
           ))}
