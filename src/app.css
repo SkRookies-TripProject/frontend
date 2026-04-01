@@ -735,6 +735,8 @@ body {
 
 /* ── 카드 ── */
 .trip-card {
+
+  position: relative;
   background: var(--gray-50);
   border-radius: 12px;
   overflow: hidden;
@@ -785,6 +787,7 @@ body {
 }
 
 .trip-card-budget { font-size: 11px; color: var(--gray-400); }
+
 
 
 
@@ -1146,6 +1149,7 @@ body {
   font-size: 12px;
   font-weight: 600;
 }
+
 
 .hamburger, .filter-icon {
   font-size: 20px;

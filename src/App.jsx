@@ -192,21 +192,25 @@ const COUNTRIES = Object.entries(countries.getNames("ko")).map(
 
 const CREATE_CATEGORIES = ["식비", "교통", "숙박", "관광", "쇼핑", "기타"];
 
-// ─── 화면 4: 여행 생성 ───────────────────────────────────────────────────────
-function CreateTripScreen({ onNavigate, onAddTrip }) {
-  const [tripName, setTripName] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [categoryBudgets, setCategoryBudgets] = useState([
-    { category: "식비", amount: "", customCategory: "" },
-  ]);
-  // 국가 검색 관련 상태
-  const [countryInput, setCountryInput] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState(null);
+// ─── 화면 4: 여행 생성 / 수정 ────────────────────────────────────────────────
+function CreateTripScreen({ onNavigate, onAddTrip, onUpdateTrip, editTrip }) {
+  const isEditMode = !!editTrip;
+  const getFlagUrl = (code) => `https://flagcdn.com/w320/${code}.png`;
+
+  const [tripName, setTripName] = useState(editTrip?.name ?? "");
+  const [startDate, setStartDate] = useState(editTrip?.startDate ?? "");
+  const [endDate, setEndDate] = useState(editTrip?.endDate ?? "");
+  const [categoryBudgets, setCategoryBudgets] = useState(
+    editTrip?.budgetData ?? [{ category: "식비", amount: "", customCategory: "" }]
+  );
+
+  const initialCountry = editTrip
+    ? COUNTRIES.find((country) => country.name === editTrip.country) ?? null
+    : null;
+  const [countryInput, setCountryInput] = useState(editTrip?.country ?? "");
+  const [selectedCountry, setSelectedCountry] = useState(initialCountry);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredCountries, setFilteredCountries] = useState([]);
-
-  const getFlagUrl = (code) => `https://flagcdn.com/w320/${code}.png`;
 
   // 입력한 국가명으로 드롭다운 후보 필터링
   const handleCountryInput = (e) => {
@@ -224,10 +228,11 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
       return;
     }
 
-    const filtered = COUNTRIES.filter((country) =>
-      country.name.toLowerCase().includes(value.toLowerCase())
+    setFilteredCountries(
+      COUNTRIES.filter((country) =>
+        country.name.toLowerCase().includes(value.toLowerCase())
+      )
     );
-    setFilteredCountries(filtered);
     setShowDropdown(true);
   };
 
@@ -258,27 +263,13 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
     0
   );
 
-  // 여행 생성 시 예산 입력값을 상세 화면용 expenses로 변환
-  const handleCreate = () => {
+  const handleSubmit = () => {
     if (!tripName.trim()) return;
 
-    const flagInfo = selectedCountry ? getFlagUrl(selectedCountry.code) : "🌍";
-    const initialExpenses = categoryBudgets
-      .filter((item) => Number(item.amount) > 0)
-      .map((item, index) => ({
-        id: index + 1,
-        category:
-          item.category === "기타" && item.customCategory
-            ? item.customCategory
-            : item.category,
-        label:
-          item.category === "기타" && item.customCategory
-            ? item.customCategory
-            : item.category,
-        amount: -Number(item.amount),
-      }));
-
-    onAddTrip({
+    const flagInfo = selectedCountry
+      ? getFlagUrl(selectedCountry.code)
+      : editTrip?.flag ?? "🌍";
+    const tripData = {
       name: tripName,
       flag: flagInfo,
       country: selectedCountry ? selectedCountry.name : countryInput,
@@ -287,10 +278,34 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
       budget: `총 ${totalBudget.toLocaleString()}원`,
       budgetData: categoryBudgets,
       totalBudget,
-      expenses: initialExpenses,
-      coverImage: "",
-      journalEntries: [],
-    });
+    };
+
+    if (isEditMode) {
+      onUpdateTrip({ ...editTrip, ...tripData });
+    } else {
+      const initialExpenses = categoryBudgets
+        .filter((item) => Number(item.amount) > 0)
+        .map((item, index) => ({
+          id: index + 1,
+          category:
+            item.category === "기타" && item.customCategory
+              ? item.customCategory
+              : item.category,
+          label:
+            item.category === "기타" && item.customCategory
+              ? item.customCategory
+              : item.category,
+          amount: -Number(item.amount),
+        }));
+
+      onAddTrip({
+        ...tripData,
+        expenses: initialExpenses,
+        coverImage: "",
+        journalEntries: [],
+      });
+    }
+
     onNavigate("home");
   };
 
@@ -300,7 +315,9 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
         <span className="back-arrow" onClick={() => onNavigate("back")}>
           ←
         </span>
-        <span className="top-bar-title">여행 기록하기</span>
+        <span className="top-bar-title">
+          {isEditMode ? "여행 수정하기" : "여행 기록하기"}
+        </span>
       </div>
 
       <div className="create-form">
@@ -349,11 +366,7 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
                   <img
                     src={getFlagUrl(country.code)}
                     alt=""
-                    style={{
-                      width: "24px",
-                      height: "16px",
-                      marginRight: "8px",
-                    }}
+                    style={{ width: "24px", height: "16px", marginRight: "8px" }}
                   />
                   <span>{country.name}</span>
                 </div>
@@ -460,24 +473,100 @@ function CreateTripScreen({ onNavigate, onAddTrip }) {
       </div>
 
       <div style={{ flex: 1 }} />
-      <GreenButton fullWidth onClick={handleCreate}>
-        만들기
+      <GreenButton fullWidth onClick={handleSubmit}>
+        {isEditMode ? "수정 완료" : "만들기"}
       </GreenButton>
     </div>
   );
 }
 
-// ─── 화면 5: 홈(여행 목록) ───────────────────────────────────────────────────
-function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
+// ─── 화면 5: 홈(여행 목록) ──────────────── 
+function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip, userName }) {
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const [menuTargetId, setMenuTargetId] = useState(null);     
+  const [deleteTargetId, setDeleteTargetId] = useState(null); 
   const defaultCoverImage = "/src/img/user_img/admin/Pic1.jpg";
 
+  const handleDeleteConfirm = () => {
+    onDeleteTrip(deleteTargetId);
+    setDeleteTargetId(null);
+    setMenuTargetId(null);
+  };
+
   return (
-    <div className="screen home-screen">
+    <div
+      className="screen home-screen"
+      onClick={() => {
+        setShowHeaderMenu(false);
+        setMenuTargetId(null);
+      }}
+    >
       <div className="home-header">
-        <span className="filter-icon" onClick={() => onNavigate("tripFilter")}>
-          ⌂
-        </span>
-        <span className="hamburger">☰</span>
+        <span className="filter-icon" onClick={(e) => { e.stopPropagation(); onNavigate("tripFilter"); }}>⌂</span>
+
+        {/* ✅ 헤더 ☰ — 클릭 시 드롭다운 토글 */}
+        <div style={{ position: "relative" }}>
+          <span
+            className="hamburger"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowHeaderMenu((prev) => !prev);
+            }}
+          >
+            ☰
+          </span>
+
+          {showHeaderMenu && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute", top: 28, right: 0,
+                background: "#fff",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                zIndex: 100,
+                minWidth: "150px",
+                overflow: "hidden",
+              }}
+            >
+              {menuTargetId ? (
+                // ✅ 여행이 선택된 상태 — 수정 / 삭제 메뉴
+                <>
+                  <div
+                    style={{ padding: "10px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#374151" }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#f3f4f6"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    onClick={() => {
+                      setShowHeaderMenu(false);
+                      onEditTrip(menuTargetId);
+                    }}
+                  >
+                    ✏️ 여행 수정하기
+                  </div>
+                  <div style={{ height: "1px", background: "#e5e7eb" }} />
+
+                  <div
+                    style={{ padding: "10px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#ef4444" }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    onClick={() => {
+                      setShowHeaderMenu(false);
+                      setDeleteTargetId(menuTargetId);
+                    }}
+                  >
+                    🗑️ 여행 삭제하기
+                  </div>
+                </>
+              ) : (
+                // ✅ 여행 미선택 상태 — 안내 문구
+                <div style={{ padding: "12px 16px", fontSize: "13px", color: "#9ca3af" }}>
+                  여행을 먼저 선택해주세요
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="home-banner">
@@ -494,7 +583,8 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
               onSelectTrip(trip.id);
               onNavigate("tripDetail");
             }}
-          >
+          >    
+  
             <div className="trip-card-thumb">
               <img
                 src={trip.coverImage || defaultCoverImage}
@@ -502,9 +592,11 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
                 className="trip-card-image"
               />
             </div>
+
             <div className="trip-card-body">
               <div className="trip-card-name">{trip.name}</div>
               <div className="trip-card-budget">{trip.budget}</div>
+
               <button
                 className="trip-review-link"
                 onClick={(e) => {
@@ -517,6 +609,23 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
                 <span>후기 작성</span>
               </button>
             </div>
+            
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuTargetId(trip.id);   // 이 카드를 헤더 ☰ 메뉴 대상으로 설정
+                setShowHeaderMenu(true);    // 헤더 메뉴 바로 열기
+              }}
+              style={{
+                position: "absolute", top: 6, right: 6,
+                background: "rgba(255,255,255,0.85)",
+                border: "none", borderRadius: "50%",
+                width: "24px", height: "24px",
+                cursor: "pointer", fontSize: "13px",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+            </button>
           </div>
         ))}
       </div>
@@ -524,11 +633,42 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, userName }) {
       <GreenButton fullWidth onClick={() => onNavigate("createTrip")}>
         여행 기록하기
       </GreenButton>
+
+      {/* 삭제 확인 메시지박스 */}
+      {deleteTargetId !== null && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}
+          onClick={() => setDeleteTargetId(null)}
+        >
+          <div
+            style={{ background: "#fff", borderRadius: "12px", padding: "24px 20px", width: "260px", textAlign: "center", boxShadow: "0 8px 24px rgba(0,0,0,0.15)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: "15px", fontWeight: "600", marginBottom: "8px" }}>삭제</div>
+            <div style={{ fontSize: "14px", color: "#6b7280", marginBottom: "20px" }}>정말 삭제하시겠습니까?</div>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+              <button
+                onClick={handleDeleteConfirm}
+                style={{ padding: "8px 24px", background: "#10b981", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: "600" }}
+              >
+                예
+              </button>
+              <button
+                onClick={() => setDeleteTargetId(null)}
+                style={{ padding: "8px 24px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "14px" }}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── 상세/통계용 더미 데이터 ─────────────────────────────────────────────────
+
 const CATEGORIES = ["ALL", "식비", "교통", "숙박", "관광", "쇼핑", "기타"];
 
 const DUMMY_EXPENSES = [
@@ -541,7 +681,9 @@ const DUMMY_EXPENSES = [
   { id: 7, category: "식비", label: "저녁 식사", amount: -32000 },
 ];
 
-// ─── 화면 6: 여행 상세 ───────────────────────────────────────────────────────
+
+// ─── 화면 6: 여행 상세 ──
+
 function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [isEditMode, setIsEditMode] = useState(false);
@@ -553,7 +695,9 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   const [amountFilter, setAmountFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState(trip?.startDate ?? null);
 
+
   // 선택 여행이 바뀌면 상세 화면 날짜 기준도 함께 갱신
+
   // ── 일별 금액 입력 상태 ────────────────────────────────────────────────────
   // isDailyInputMode: 선택한 날짜에 지출이 없을 때 입력 폼을 보여줄지 여부
   const [isDailyInputMode, setIsDailyInputMode] = useState(false);
@@ -641,12 +785,6 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
 
   const budgetLabel = trip.budget?.replace("사용 예산: ", "") ?? trip.budget ?? "-";
   const dateTabs = buildTripDays(trip);
-
-  // 여행 생성 단계에서 만든 지출 데이터가 있으면 우선 사용
-  const baseExpenses = trip.expenses?.length ? trip.expenses : DUMMY_EXPENSES;
-  // 카테고리/금액 조건을 반영한 상세 목록
-
-
   // 선택된 날짜의 지출 목록 (dailyExpenses 우선, 없으면 빈 배열)
   const dailyExpenses = selectedDate
     ? (trip?.dailyExpenses || {})[selectedDate] || []
@@ -654,7 +792,8 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
 
   // 전체 지출 (모든 날짜 합산) — 카테고리/정렬 필터 적용
   const allExpenses = Object.values(trip?.dailyExpenses || {}).flat();
- 
+  const baseExpenses = selectedDate ? dailyExpenses : allExpenses;
+
   const filteredExpenses = [...baseExpenses]
     .filter((e) => activeCategory === "ALL" || e.category === activeCategory)
     .filter((e) =>
@@ -667,6 +806,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
       if (sortOrder === "low") return Math.abs(a.amount) - Math.abs(b.amount);
       return 0;
     });
+
 
 
   // 수정 모드 진입 시 현재 값들을 입력창 상태로 펼쳐 놓음
@@ -708,7 +848,6 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   // ── 수정 모드 화면 ─────────────────────────────────────────────────────────
   if (isEditMode) {
 
-    // 수정 모드에서는 선택한 카테고리만 편집 대상으로 노출
     const editTargets = activeCategory === "ALL"
       ? allExpenses
       : allExpenses.filter((e) => e.category === activeCategory);
@@ -1059,6 +1198,7 @@ export default function App() {
   const [selectedTripId, setSelectedTripId] = useState(null);
   const [prevScreen, setPrevScreen] = useState("home");
   const [userName, setUserName] = useState("관리자");
+  const [editingTrip, setEditingTrip] = useState(null);
 
   // 로그인 사용자명 반영
   const handleLogin = (name) => {
@@ -1080,19 +1220,34 @@ export default function App() {
     setPrevScreen(screen);
     setScreen(destination);
   };
-
-  // 여행 생성 후 홈 목록에 추가
+  // 여행 추가
   const handleAddTrip = (newTrip) => {
     setTrips((prev) => [...prev, { id: Date.now(), ...newTrip }]);
+    setEditingTrip(null);
     setScreen("home");
   };
-
-  // 상세/후기에서 수정된 여행 데이터 반영
+  // 여행 수정
   const handleUpdateTrip = (updatedTrip) => {
     setTrips((prev) =>
       prev.map((trip) => (trip.id === updatedTrip.id ? updatedTrip : trip))
     );
+    setEditingTrip(null); 
+    setScreen("home");
   };
+  
+  // 여행 삭제
+  const handleDeleteTrip = (tripId) => {
+    setTrips((prev) => prev.filter((t) => t.id !== tripId));
+    if (selectedTripId === tripId) setSelectedTripId(null);
+  };
+
+  // 수정 모드 진입 
+  const handleEditTrip = (tripId) => {
+    const target = trips.find((t) => t.id === tripId);
+    setEditingTrip(target); 
+    setScreen("createTrip"); 
+  };
+
 
   // 현재 선택된 여행
   const selectedTrip = trips.find((trip) => trip.id === selectedTripId) || null;
@@ -1107,16 +1262,27 @@ export default function App() {
       case "onboarding":
         return <OnboardingScreen onNavigate={navigate} />;
       case "createTrip":
-        return <CreateTripScreen onNavigate={navigate} onAddTrip={handleAddTrip} />;
+        return (
+          <CreateTripScreen 
+            onNavigate={navigate} 
+            onAddTrip={handleAddTrip} 
+            onUpdateTrip={handleUpdateTrip} 
+            editTrip={editingTrip}           
+          />
+        );
+        
       case "home":
         return (
           <HomeScreen
             trips={trips}
             onNavigate={navigate}
             onSelectTrip={setSelectedTripId}
+            onDeleteTrip={handleDeleteTrip} 
+            onEditTrip={handleEditTrip}    
             userName={userName}
           />
         );
+
       case "tripDetail":
         return (
           <TripDetailScreen
@@ -1186,7 +1352,10 @@ export default function App() {
             <button
               key={key}
               className={`nav-btn${screen === key ? " active" : ""}`}
-              onClick={() => setScreen(key)}
+              onClick={() => {
+                if (key !== "createTrip") setEditingTrip(null); 
+                setScreen(key);
+              }}
             >
               {label}
             </button>
