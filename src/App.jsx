@@ -760,7 +760,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   // ── 일반 상세 화면 ─────────────────────────────────────────────────────────
   return (
     <div className="screen trip-detail-screen">
-      {/* 헤더 */}
+      {/* 헤더. */}
       <div className="detail-header">
         <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
         <div className="detail-title-wrapper"
