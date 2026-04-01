@@ -760,43 +760,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
 }
 
 // ─── 화면 7: 지출 목록 ───────────────────────────────────────────────────────
-function ExpenseListScreen({ onNavigate }) {
-  const items = [1, 2, 3, 4, 5];
-  const categories = ["전체", "음식", "교통", "관광", "숙박", "쇼핑", "기타"];
-  return (
-    <div className="screen expense-list-screen">
-      <div className="detail-header">
-        <span className="home-icon" onClick={() => onNavigate("home")}>⌂</span>
-        <span className="detail-title">지출 목록</span>
-        <span className="menu-icon">☰</span>
-      </div>
-      <div className="search-bar"><input className="search-input" placeholder="🔍 SEARCH HERE..." /></div>
-      <div className="cat-tabs">
-        {categories.map((c) => <span key={c} className="cat-tab">{c}</span>)}
-      </div>
-      <div className="sub-row">
-        <span className="sub-label">날짜</span><span className="sub-label">최신순</span>
-      </div>
-      <div className="expense-list">
-        {items.map((item) => (
-          <div key={item} className="expense-row">
-            <div className="expense-row-left">
-              <div className="expense-color-bar green-bar"></div>
-              <div><div className="expense-row-date">2025.00.00 ~ 2025.00.00</div></div>
-            </div>
-            <div className="expense-row-amount">10,000 원</div>
-            <button className="edit-btn">✎</button>
-          </div>
-        ))}
-      </div>
-      <div className="pagination">
-        {[1, 2, 3, 4, 5].map((page) => (
-          <span key={page} className={`page-dot${page === 1 ? " active" : ""}`}>{page}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
+//삭제
 
 // ─── 메인 앱 ─────────────────────────────────────────────────────────────────
 export default function App() {
@@ -860,7 +824,6 @@ export default function App() {
           renderButton={(label, onClick) => <GreenButton fullWidth onClick={onClick}>{label}</GreenButton>} />;
       case "stats":
         return <StatsScreen onNavigate={navigate} trip={selectedTrip} expenses={selectedTrip?.expenses || []} />;
-      case "expenseList": return <ExpenseListScreen onNavigate={navigate} />;
       case "admin": return <AdminPage onNavigate={navigate} />;
       default: return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
     }
