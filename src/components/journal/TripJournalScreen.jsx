@@ -45,6 +45,8 @@ export default function TripJournalScreen({
   const [reviewImages, setReviewImages] = useState([]);
   const [memo, setMemo] = useState("");
   const [selectedEntryId, setSelectedEntryId] = useState(null);
+  const [editingEntryId, setEditingEntryId] = useState(null);
+  const [deleteEntryId, setDeleteEntryId] = useState(null);
 
   if (!trip) {
     return (
@@ -71,6 +73,13 @@ export default function TripJournalScreen({
   const selectedEntry =
     selectedEntries.find((entry) => entry.id === selectedEntryId) ?? null;
 
+  const resetEditor = () => {
+    setMemo("");
+    setReviewImages([]);
+    setIsWriting(false);
+    setEditingEntryId(null);
+  };
+
   const handleReviewImageChange = (e) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -87,7 +96,38 @@ export default function TripJournalScreen({
   const handleSaveReview = () => {
     if (!isWriting) {
       setSelectedEntryId(null);
+      setEditingEntryId(null);
       setIsWriting(true);
+      return;
+    }
+
+    const imagePreviews = reviewImages.map((image) => image.preview);
+
+    if (editingEntryId !== null) {
+      const targetEntry = reviewEntries.find((entry) => entry.id === editingEntryId);
+      if (!targetEntry) return;
+
+      const nextEntries = reviewEntries.map((entry) =>
+        entry.id === editingEntryId
+          ? {
+              ...entry,
+              dayIndex: selectedDay,
+              dateText: selectedDayInfo?.fullDate ?? entry.dateText ?? "",
+              memo: memo.trim(),
+              imagePreviews,
+              updatedAt: new Date().toISOString(),
+            }
+          : entry
+      );
+
+      onUpdateTrip?.({
+        ...trip,
+        journalEntries: nextEntries,
+        coverImage: trip.coverImage || imagePreviews[0] || "",
+      });
+
+      resetEditor();
+      setSelectedEntryId(editingEntryId);
       return;
     }
 
@@ -98,7 +138,7 @@ export default function TripJournalScreen({
       dayIndex: selectedDay,
       dateText: selectedDayInfo?.fullDate ?? "",
       memo: memo.trim(),
-      imagePreviews: reviewImages.map((image) => image.preview),
+      imagePreviews,
       createdAt,
       createdTimeText: formatKoreanTime(createdAt),
     };
@@ -107,12 +147,10 @@ export default function TripJournalScreen({
       ...trip,
       journalEntries: [nextEntry, ...reviewEntries],
       // 첫 후기 이미지가 메인 여행 카드 대표 이미지로 보이도록 연결
-      coverImage: trip.coverImage || reviewImages[0]?.preview || "",
+      coverImage: trip.coverImage || imagePreviews[0] || "",
     });
 
-    setMemo("");
-    setReviewImages([]);
-    setIsWriting(false);
+    resetEditor();
     setSelectedEntryId(null);
   };
 
@@ -138,6 +176,53 @@ export default function TripJournalScreen({
     });
   };
 
+  const handleStartEditEntry = () => {
+    if (!selectedEntry) return;
+
+    setMemo(selectedEntry.memo ?? "");
+    setReviewImages(
+      (selectedEntry.imagePreviews ?? []).map((imagePreview, index) => ({
+        id: `${selectedEntry.id}-${index}`,
+        preview: imagePreview,
+      }))
+    );
+    setEditingEntryId(selectedEntry.id);
+    setIsWriting(true);
+  };
+
+  const handleRequestDeleteEntry = (entryId) => {
+    setDeleteEntryId(entryId);
+  };
+
+  const handleConfirmDeleteEntry = () => {
+    const targetEntry = reviewEntries.find((entry) => entry.id === deleteEntryId);
+    if (!targetEntry) {
+      setDeleteEntryId(null);
+      return;
+    }
+
+    const nextEntries = reviewEntries.filter((entry) => entry.id !== deleteEntryId);
+    const nextCoverImage = targetEntry.imagePreviews?.includes(trip.coverImage)
+      ? nextEntries.find((entry) => entry.imagePreviews?.length)?.imagePreviews?.[0] || ""
+      : trip.coverImage;
+
+    onUpdateTrip?.({
+      ...trip,
+      journalEntries: nextEntries,
+      coverImage: nextCoverImage,
+    });
+
+    if (selectedEntryId === deleteEntryId) {
+      setSelectedEntryId(null);
+    }
+
+    if (editingEntryId === deleteEntryId) {
+      resetEditor();
+    }
+
+    setDeleteEntryId(null);
+  };
+
   return (
     <div className="screen trip-journal-screen">
       <div className="journal-shell">
@@ -156,7 +241,7 @@ export default function TripJournalScreen({
               onClick={() => {
                 setSelectedDay(index);
                 setSelectedEntryId(null);
-                setIsWriting(false);
+                resetEditor();
               }}
             >
               <span className="journal-day-label">{day.label}</span>
@@ -244,7 +329,25 @@ export default function TripJournalScreen({
             </div>
           ) : null}
           <div className="journal-entry-detail-card">
-            <div className="journal-entry-detail-label">메모</div>
+            <div className="journal-entry-detail-label-row">
+              <div className="journal-entry-detail-label">메모</div>
+              <div className="journal-entry-detail-actions">
+                <button
+                  type="button"
+                  className="journal-entry-edit-btn"
+                  onClick={handleStartEditEntry}
+                >
+                  수정
+                </button>
+                <button
+                  type="button"
+                  className="journal-entry-delete-btn"
+                  onClick={() => handleRequestDeleteEntry(selectedEntry.id)}
+                >
+                  삭제
+                </button>
+              </div>
+            </div>
             <p className="journal-entry-detail-memo">
               {selectedEntry.memo || "작성된 메모가 없습니다."}
             </p>
@@ -267,8 +370,20 @@ export default function TripJournalScreen({
                 <span className="journal-entry-date">{entry.dateText}</span>
                 <span className="journal-entry-tag">{entry.memo || "메모 없음"}</span>
               </div>
-              <div className="journal-entry-time">
-                {entry.createdTimeText || formatKoreanTime(entry.createdAt)}
+              <div className="journal-entry-bottom">
+                <div className="journal-entry-time">
+                  {entry.createdTimeText || formatKoreanTime(entry.createdAt)}
+                </div>
+                <button
+                  type="button"
+                  className="journal-entry-delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRequestDeleteEntry(entry.id);
+                  }}
+                >
+                  삭제
+                </button>
               </div>
             </button>
           ))}
@@ -277,8 +392,39 @@ export default function TripJournalScreen({
         <div className="journal-empty-state"></div>
       )}
 
+      {deleteEntryId !== null ? (
+        <div
+          className="journal-confirm-overlay"
+          onClick={() => setDeleteEntryId(null)}
+        >
+          <div
+            className="journal-confirm-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="journal-confirm-title">삭제</div>
+            <div className="journal-confirm-text">정말 삭제하시겠습니까?</div>
+            <div className="journal-confirm-actions">
+              <button
+                type="button"
+                className="journal-confirm-yes"
+                onClick={handleConfirmDeleteEntry}
+              >
+                예
+              </button>
+              <button
+                type="button"
+                className="journal-confirm-no"
+                onClick={() => setDeleteEntryId(null)}
+              >
+                아니요
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {renderButton(
-        selectedEntry ? "목록으로" : "기록하기",
+        selectedEntry ? "목록으로" : isWriting ? (editingEntryId !== null ? "수정 저장" : "기록하기") : "기록하기",
         () => {
           if (selectedEntry) {
             setSelectedEntryId(null);
