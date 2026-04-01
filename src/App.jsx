@@ -1231,6 +1231,12 @@ export default function App() {
     setTrips((prev) =>
       prev.map((trip) => (trip.id === updatedTrip.id ? updatedTrip : trip))
     );
+
+    // 후기 저장/수정은 현재 후기 목록 화면에 그대로 남기기
+    if (screen === "tripJournal") {
+      return;
+    }
+
     setEditingTrip(null); 
     setScreen("home");
   };
