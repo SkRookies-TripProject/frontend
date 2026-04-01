@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import BudgetSummary from "../components/stats/BudgetSummary";
 import TripDayTabs from "../components/stats/TripDayTabs";
 import CategoryDonutChart from "../components/stats/CategoryDonutChart";
@@ -9,17 +10,21 @@ import {
   calculateBudgetSummary,
   formatDateRange,
   buildMonthlyExpenseCalendar,
+  getNormalizedExpenses,
 } from "../components/stats/statsUtils";
+import { all } from "axios";
 
-export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
+export default function StatsScreen({ onNavigate, trip }) {
+  const [selectedDate, setSelectedDate] = useState(null);
   const getFlagUrl = (code) => `https://flagcdn.com/w320/${code}.png`;
+
   if (!trip) {
     return (
       <div className="screen stats-screen">
         <div className="detail-header">
           <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
           <span className="detail-title">여행 통계</span>
-          <span className="menu-icon"></span>
+          <span className="menu-icon">☰</span>
         </div>
         <p style={{ padding: 24, textAlign: "center", color: "#888" }}>
           여행을 먼저 선택해주세요.
@@ -29,16 +34,24 @@ export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
   }
 
   const tripDays = buildTripDays(trip.startDate, trip.endDate);
-  const stats = buildCategoryStats(expenses);
+
+  const allExpenses = useMemo(() => getNormalizedExpenses(trip), [trip]);
+
+  const selectedExpenses = selectedDate
+    ? allExpenses.filter((item) => item.expenseDate === selectedDate)
+    : allExpenses;
+
+  const stats = buildCategoryStats(selectedExpenses);
+
   const { totalBudget, spentAmount, remainingBudget } = calculateBudgetSummary(
-    trip.budget,
-    expenses
+    trip.totalBudget || trip.budget,
+    selectedExpenses
   );
 
   const calendarData = buildMonthlyExpenseCalendar(
     trip.startDate,
     trip.endDate,
-    expenses
+    allExpenses
   );
 
   return (
@@ -68,10 +81,31 @@ export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
           </span>
         </div>
         
-        <span className="menu-icon" style={{ width: '24px' }}></span> {/* 좌우 균형을 위한 빈 공간 */}
+        <span className="menu-icon">☰</span>
       </div>
 
-      <TripDayTabs days={tripDays} />
+    <div className="stats-content">
+      <TripDayTabs
+        days={tripDays}
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+      />
+
+      <div style={{ padding: "0 20px 8px",
+            justifyContent: "center",
+            alignItems: "center",
+            display: "flex",
+            }}>
+        <button onClick={() => setSelectedDate(null)}
+          style={{
+          border: "none",
+          background: "transparent",
+          color: "#22c55e",
+          cursor: "pointer",
+        }}>
+          전체 통계
+        </button>
+      </div>
 
       <BudgetSummary
         totalBudget={totalBudget}
@@ -84,10 +118,9 @@ export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
       </div>
 
       <CategoryDonutChart stats={stats} />
-
       <StatsLegend stats={stats} />
-
       <MonthlyExpenseCalendar calendarData={calendarData} />
     </div>
-  );
+  </div>
+);
 }

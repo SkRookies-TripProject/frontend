@@ -823,9 +823,18 @@ export default function App() {
           onUpdateTrip={handleUpdateTrip}
           renderButton={(label, onClick) => <GreenButton fullWidth onClick={onClick}>{label}</GreenButton>} />;
       case "stats":
-        return <StatsScreen onNavigate={navigate} trip={selectedTrip} expenses={selectedTrip?.expenses || []} />;
-      case "admin": return <AdminPage onNavigate={navigate} />;
-      default: return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
+      return (
+        <StatsScreen
+          onNavigate={navigate}
+          trip={selectedTrip}
+        />
+      );
+      case "expenseList":
+        return <ExpenseListScreen onNavigate={navigate} />;
+      case "admin":
+        return <AdminPage onNavigate={navigate} />;
+      default:
+        return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
     }
   };
 
