@@ -34,9 +34,11 @@ export default function MonthlyExpenseCalendar({ calendarData }) {
             {!cell.isEmpty && (
               <>
                 <div className="monthly-calendar-day">{cell.day}</div>
-                <div className="monthly-calendar-amount">
-                  {formatCurrency(cell.amount)}
-                </div>
+                {cell.amount > 0 && (
+                  <div className="monthly-calendar-amount">
+                    {formatCurrency(cell.amount)}
+                  </div>
+                )}
               </>
             )}
           </div>

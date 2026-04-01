@@ -17,7 +17,7 @@ import { all } from "axios";
 export default function StatsScreen({ onNavigate, trip }) {
   const [selectedDate, setSelectedDate] = useState(null);
   const getFlagUrl = (code) => `https://flagcdn.com/w320/${code}.png`;
-  
+
   if (!trip) {
     return (
       <div className="screen stats-screen">
@@ -91,8 +91,18 @@ export default function StatsScreen({ onNavigate, trip }) {
         onSelectDate={setSelectedDate}
       />
 
-      <div style={{ padding: "0 20px 8px" }}>
-        <button onClick={() => setSelectedDate(null)}>
+      <div style={{ padding: "0 20px 8px",
+            justifyContent: "center",
+            alignItems: "center",
+            display: "flex",
+            }}>
+        <button onClick={() => setSelectedDate(null)}
+          style={{
+          border: "none",
+          background: "transparent",
+          color: "#22c55e",
+          cursor: "pointer",
+        }}>
           전체 통계
         </button>
       </div>
