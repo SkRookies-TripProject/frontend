@@ -759,7 +759,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
         <span className="menu-icon">☰</span>
       </div>
 
-      {/* ① 전체 예산 요약 (달력 위) */}
+      {/* ① 전체 예산 요약 (달력 위). */}
       <div className="budget-summary">
         <div className="budget-item">
           <div className="budget-label">전체예산</div>
