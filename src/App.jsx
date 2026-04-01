@@ -23,10 +23,7 @@ function GreenButton({ children, onClick, fullWidth }) {
 function buildTripDays(trip) {
   if (!trip?.startDate || !trip?.endDate) {
     return [
-      { label: "월", date: 30, fullDate: "3월30일", isoDate: "2026-03-30" },
-      { label: "화", date: 31, fullDate: "3월31일", isoDate: "2026-03-31" },
-      { label: "수", date: 1, fullDate: "4월1일", isoDate: "2026-04-01" },
-      { label: "목", date: 2, fullDate: "4월2일", isoDate: "2026-04-02" },
+      { label: "여행 기간을 등록하지 않았어요" },
     ];
   }
 
@@ -773,7 +770,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
     return (
       <div className="screen trip-detail-screen">
         <div className="detail-header">
-          <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
+          <span className="home-icon" onClick={() => onNavigate("home")}>⌂</span>
           <span className="detail-title">여행을 선택해주세요</span>
         </div>
         <p style={{ padding: "24px", color: "#888", textAlign: "center" }}>
@@ -908,9 +905,9 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   // ── 일반 상세 화면 ─────────────────────────────────────────────────────────
   return (
     <div className="screen trip-detail-screen">
-      {/* 헤더 */}
+      {/* 헤더. */}
       <div className="detail-header">
-        <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
+        <span className="home-icon" onClick={() => onNavigate("home")}>⌂</span>
         <div className="detail-title-wrapper"
           style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, justifyContent: "center" }}>
           {trip.flag && trip.flag.startsWith("http") ? (
@@ -1025,9 +1022,9 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
         {/* ── 날짜 미선택 상태 ── */}
         {!selectedDate && (
           <div className="expense-empty">
-            <div>📅 날짜를 선택하세요</div>
+            <div>📅 날짜를 등록해 주세요</div>
             <div style={{ fontSize: 12, color: "#bbb", marginTop: 4 }}>
-              위 달력에서 날짜를 탭하면 지출을 입력할 수 있어요
+              날짜를 등록하면 위 달력에서 날짜를 선택할 수 있어요
             </div>
           </div>
         )}
@@ -1081,7 +1078,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
                 onClick={() => setIsDailyInputMode(false)}>
                 취소
               </button>
-              <button className="daily-save-btn" onClick={saveDailyExpenses}>
+              <button className="daily-save-btn" onClick={saveDailyExpenses }>
                 저장
               </button>
             </div>
@@ -1238,7 +1235,6 @@ export default function App() {
     }
 
     setEditingTrip(null); 
-    setScreen("home");
   };
   
   // 여행 삭제
