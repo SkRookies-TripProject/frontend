@@ -644,7 +644,6 @@ export default function App() {
         <StatsScreen
           onNavigate={navigate}
           trip={selectedTrip}
-          expenses={DUMMY_EXPENSES}
         />
       );
       case "expenseList":

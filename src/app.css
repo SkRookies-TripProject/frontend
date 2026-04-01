@@ -903,6 +903,48 @@ body {
 .stats-content {
   padding: 16px;
 }
+/* 날짜 탭 */
+.stats-screen .day-tabs {
+  display: flex;
+  padding: 10px 16px;
+  gap: 4px;
+  border-bottom: 1px solid var(--gray-100);
+  background: #f8f8f8;
+}
+
+.stats-screen .day-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  min-height: 56px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.stats-screen .day-col-active {
+  background: #dff5e8;
+}
+
+.stats-screen .day-col-active .day-label,
+.stats-screen .day-col-active .day-num {
+  color: #22c55e;
+  font-weight: 700;
+}
+
+.stats-screen .day-label {
+  font-size: 11px;
+  color: var(--gray-400);
+}
+
+.stats-screen .day-num {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
 
 /* 날짜 박스 */
 .stats-date-range-box {

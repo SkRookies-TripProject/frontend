@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import BudgetSummary from "../components/stats/BudgetSummary";
 import TripDayTabs from "../components/stats/TripDayTabs";
 import CategoryDonutChart from "../components/stats/CategoryDonutChart";
@@ -9,9 +10,13 @@ import {
   calculateBudgetSummary,
   formatDateRange,
   buildMonthlyExpenseCalendar,
+  getNormalizedExpenses,
 } from "../components/stats/statsUtils";
+import { all } from "axios";
 
-export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
+export default function StatsScreen({ onNavigate, trip }) {
+  const [selectedDate, setSelectedDate] = useState(null);
+
   if (!trip) {
     return (
       <div className="screen stats-screen">
@@ -28,16 +33,24 @@ export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
   }
 
   const tripDays = buildTripDays(trip.startDate, trip.endDate);
-  const stats = buildCategoryStats(expenses);
+
+  const allExpenses = useMemo(() => getNormalizedExpenses(trip), [trip]);
+
+  const selectedExpenses = selectedDate
+    ? allExpenses.filter((item) => item.expenseDate === selectedDate)
+    : allExpenses;
+
+  const stats = buildCategoryStats(selectedExpenses);
+
   const { totalBudget, spentAmount, remainingBudget } = calculateBudgetSummary(
-    trip.budget,
-    expenses
+    trip.totalBudget || trip.budget,
+    selectedExpenses
   );
 
   const calendarData = buildMonthlyExpenseCalendar(
     trip.startDate,
     trip.endDate,
-    expenses
+    allExpenses
   );
 
   return (
@@ -49,7 +62,17 @@ export default function StatsScreen({ onNavigate, trip, expenses = [] }) {
     </div>
 
     <div className="stats-content">
-      <TripDayTabs days={tripDays} />
+      <TripDayTabs
+        days={tripDays}
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+      />
+
+      <div style={{ padding: "0 20px 8px" }}>
+        <button onClick={() => setSelectedDate(null)}>
+          전체 통계
+        </button>
+      </div>
 
       <BudgetSummary
         totalBudget={totalBudget}
