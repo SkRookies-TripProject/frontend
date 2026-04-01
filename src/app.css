@@ -933,6 +933,12 @@ body {
   gap: 20px;
 }
 
+.journal-entry-time {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--gray-400);
+}
+
 .journal-entry-date {
   font-size: 14px;
   color: #333;
@@ -972,6 +978,13 @@ body {
   font-size: 15px;
   font-weight: 600;
   color: #333;
+}
+
+.journal-entry-detail-date-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .journal-entry-detail-image {

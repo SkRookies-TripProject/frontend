@@ -22,6 +22,17 @@ function buildTripDays(trip) {
   return days;
 }
 
+function formatKoreanTime(dateLike) {
+  if (!dateLike) return "";
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(dateLike));
+}
+
 export default function TripJournalScreen({
   onNavigate,
   trip,
@@ -81,12 +92,15 @@ export default function TripJournalScreen({
     }
 
     // 사용자가 작성한 메모와 이미지를 날짜별 후기 기록으로 저장
+    const createdAt = new Date().toISOString();
     const nextEntry = {
       id: Date.now(),
       dayIndex: selectedDay,
       dateText: selectedDayInfo?.fullDate ?? "",
       memo: memo.trim(),
       imagePreviews: reviewImages.map((image) => image.preview),
+      createdAt,
+      createdTimeText: formatKoreanTime(createdAt),
     };
 
     onUpdateTrip?.({
@@ -200,7 +214,12 @@ export default function TripJournalScreen({
       ) : selectedEntry ? (
         // 기록 목록에서 선택한 메모의 상세 보기 화면
         <div className="journal-entry-detail">
-          <div className="journal-entry-detail-date">{selectedEntry.dateText}</div>
+          <div className="journal-entry-detail-date-row">
+            <div className="journal-entry-detail-date">{selectedEntry.dateText}</div>
+            <div className="journal-entry-time">
+              {selectedEntry.createdTimeText || formatKoreanTime(selectedEntry.createdAt)}
+            </div>
+          </div>
           {selectedEntry.imagePreviews?.length ? (
             <div className="journal-entry-detail-images">
               {selectedEntry.imagePreviews.map((imagePreview, index) => (
@@ -247,6 +266,9 @@ export default function TripJournalScreen({
               <div className="journal-entry-top">
                 <span className="journal-entry-date">{entry.dateText}</span>
                 <span className="journal-entry-tag">{entry.memo || "메모 없음"}</span>
+              </div>
+              <div className="journal-entry-time">
+                {entry.createdTimeText || formatKoreanTime(entry.createdAt)}
               </div>
             </button>
           ))}
