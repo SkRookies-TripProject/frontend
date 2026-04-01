@@ -939,6 +939,14 @@ body {
   color: var(--gray-400);
 }
 
+.journal-entry-bottom {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .journal-entry-date {
   font-size: 14px;
   color: #333;
@@ -1033,11 +1041,104 @@ body {
   box-shadow: 0 4px 10px rgba(17, 24, 39, 0.12);
 }
 
+.journal-entry-detail-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.journal-entry-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .journal-entry-detail-label {
   font-size: 13px;
   font-weight: 600;
   color: var(--gray-700);
   margin-bottom: 10px;
+}
+
+.journal-entry-edit-btn {
+  border: none;
+  background: transparent;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.journal-entry-delete-btn {
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.journal-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 120;
+}
+
+.journal-confirm-modal {
+  width: min(280px, calc(100% - 32px));
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px 18px 18px;
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.2);
+  text-align: center;
+}
+
+.journal-confirm-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.journal-confirm-text {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.journal-confirm-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.journal-confirm-yes,
+.journal-confirm-no {
+  min-width: 84px;
+  padding: 9px 0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.journal-confirm-yes {
+  border: none;
+  background: var(--green);
+  color: #fff;
+}
+
+.journal-confirm-no {
+  border: 1px solid var(--gray-200);
+  background: #fff;
+  color: var(--gray-600);
 }
 
 .journal-entry-detail-memo {
