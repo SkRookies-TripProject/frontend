@@ -57,10 +57,10 @@ const inputClass =
     'focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all';
 
 function LoginScreen({ onNavigate, onLogin }) {
-  
-    const [email,    setEmail]    = useState('');
+
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loading,  setLoading]  = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const { login } = useAuthStore();
 
@@ -68,13 +68,12 @@ function LoginScreen({ onNavigate, onLogin }) {
         e.preventDefault();
         setLoading(true);
         try {
-          console.log("로그인 시도");
-            await login(email, password); 
-            console.log("로그인 성공");        // authStore → authApi → 서버
-            onNavigate("afterLogin");                  // 성공 시 온보딩 페이지로 이동
+            console.log("로그인 시도");
+            await login(email, password);
+            console.log("로그인 성공");
+            onNavigate("afterLogin");
         } catch (err) {
-          console.log("로그인 실패");
-            // axiosInstance 인터셉터가 서버 메시지로 err.message를 교체했습니다.
+            console.log("로그인 실패");
             alert(err.message || '로그인에 실패했습니다.');
         } finally {
             setLoading(false);
@@ -82,56 +81,57 @@ function LoginScreen({ onNavigate, onLogin }) {
     };
 
     return (
-        <div className="max-w-md mx-auto mt-4">
-            <div className="border border-slate-200 rounded-xl p-8">
+        <div className="screen login-screen">
 
-                <h3 className="text-lg font-semibold text-slate-700 border-l-4 border-blue-400 pl-3 mb-6">
-                    로그인
-                </h3>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-
-                    <div>
-                        <label className="block mb-1.5 font-semibold text-sm text-slate-500">이메일</label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            placeholder="예: admin@aa.com"
-                            required
-                            className={inputClass}
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block mb-1.5 font-semibold text-sm text-slate-500">비밀번호</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            placeholder="비밀번호를 입력하세요"
-                            required
-                            className={inputClass}
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="btn btn-primary w-full disabled:opacity-50"
-                    >
-                        {loading ? '로그인 중...' : '로그인'}
-                    </button>
-                </form>
-
-                <p className="text-sm text-slate-500 mt-5 text-center">
-                    계정이 없으신가요?{' '}
-                    <Link to="/register" className="text-blue-500 hover:underline font-semibold">
-                        회원가입
-                    </Link>
-                </p>
-
+            {/* 로고 */}
+            <div className="logo-wrapper">
+                <img src="/src/img/logo.png" alt="logo" className="logo" />
             </div>
+
+            {/* 제목 */}
+            <div className="login-title">로그인</div>
+
+            <form onSubmit={handleSubmit}>
+
+                <div className="form-group">
+                    <input
+                        type="email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        placeholder="이메일"
+                        required
+                        className="input-field"
+                    />
+                </div>
+
+                <div className="form-group">
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        placeholder="비밀번호"
+                        required
+                        className="input-field"
+                    />
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="green-btn full-width"
+                >
+                    {loading ? '로그인 중...' : '로그인'}
+                </button>
+
+            </form>
+
+            <div className="sub-link">
+                계정이 없으신가요?{' '}
+                <span className="link" onClick={() => onNavigate("register")}>
+                    회원가입
+                </span>
+            </div>
+
         </div>
     );
 }
