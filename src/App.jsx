@@ -378,7 +378,7 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
                 style={{ position: "absolute", top: 6, right: 6,
                   background: "rgba(255,255,255,0.85)", border: "none", borderRadius: "50%",
                   width: "24px", height: "24px", cursor: "pointer", fontSize: "13px",
-                  display: "flex", alignItems: "center", justifyContent: "center" }} />
+                  display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }} />
             </div>
           );
         })}
