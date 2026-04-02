@@ -805,8 +805,8 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
 // ─── 메인 앱 ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [screen, setScreen] = useState("login");
-  const [trips, setTrips] = useState([]);
-  const [selectedTripId, setSelectedTripId] = useState(null);
+  const [trips, setTrips] = useState([TEST_TRIP]);
+  const [selectedTripId, setSelectedTripId] = useState(TEST_TRIP.id);
   const [prevScreen, setPrevScreen] = useState("home");
   const [userName, setUserName] = useState("관리자");
   const [editingTrip, setEditingTrip] = useState(null);
