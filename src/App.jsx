@@ -79,9 +79,9 @@ function LoginScreen({ onNavigate, onLogin }) {
 
 // ─── 화면 2: 회원가입 ────────────────────────────────────────────────────────
 function RegisterScreen({ onNavigate, onLogin }) {
-  const [fields, setFields] = useState({ name: "", email: "", id: "", pw: "", pw2: "" });
-  const placeholders = ["사용자 이름", "이메일 입력", "아이디 입력", "비밀번호 입력"];
-  const keys = ["name", "email", "id", "pw"];
+  const [fields, setFields] = useState({ name: "", email: "", pw: "", pw2: "" });
+  const placeholders = ["사용자 이름", "이메일 입력", "비밀번호 입력"];
+  const keys = ["name", "email", "pw"];
   return (
     <div className="screen register-screen">
       <h1 className="register-title">회원가입</h1>
@@ -424,6 +424,9 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   const [selectedDate, setSelectedDate] = useState(trip?.startDate ?? null);
   const [isDailyInputMode, setIsDailyInputMode] = useState(false);
   const [dailyInputItems, setDailyInputItems] = useState([{ category: "식비", amount: "", memo: "" }]);
+  const getDefaultCategory = () => {
+    return activeCategory === "ALL" ? "식비" : activeCategory;
+  };
 
   useEffect(() => {
     setSelectedDate(trip?.startDate ?? null);
@@ -439,7 +442,10 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   };
 
   const addDailyItem = () =>
-    setDailyInputItems((prev) => [...prev, { category: "식비", amount: "", memo: "" }]);
+    setDailyInputItems((prev) => [
+      ...prev,
+      { category: getDefaultCategory(), amount: "", memo: "" }
+    ]);
 
   const handleDailyItemChange = (index, field, value) =>
     setDailyInputItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
@@ -742,7 +748,17 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
               <div className="expense-empty">
                 <div>아직 입력된 예산이 없어요...</div>
                 <div style={{ fontSize: 12, color: "#bbb", marginTop: 4 }}>아래 + 버튼을 눌러 지출을 추가해보세요</div>
-                <button className="daily-add-btn" onClick={() => setIsDailyInputMode(true)}>+ 금액 입력하기</button>
+                <button
+                  className="daily-add-btn"
+                  onClick={() => {
+                    setIsDailyInputMode(true);
+                    setDailyInputItems([
+                      { category: getDefaultCategory(), amount: "", memo: "" }
+                    ]);
+                  }}
+                >
+                  + 금액 입력하기
+                </button>
               </div>
             ) : (
               <>
@@ -757,7 +773,17 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
                     </div>
                   </div>
                 ))}
-                <button className="daily-more-btn" onClick={() => setIsDailyInputMode(true)}>+ 이 날 지출 추가</button>
+                <button
+                  className="daily-more-btn"
+                  onClick={() => {
+                    setIsDailyInputMode(true);
+                    setDailyInputItems([
+                      { category: getDefaultCategory(), amount: "", memo: "" }
+                    ]);
+                  }}
+                >
+                  + 이 날 지출 추가
+                </button>
               </>
             )}
           </>
