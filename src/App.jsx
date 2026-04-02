@@ -127,6 +127,12 @@ const COUNTRIES = Object.entries(countries.getNames("ko")).map(([code, name]) =>
   code: code.toLowerCase(), name,
 }));
 const CREATE_CATEGORIES = ["식비", "교통", "숙박", "관광", "쇼핑", "기타"];
+const defaultImages = Array.from({ length: 30 }, (_, i) =>
+  `/src/img/user_img/admin/Pic${i + 1}.jpg`
+);
+
+  const getRandomImage = () =>
+    defaultImages[Math.floor(Math.random() * defaultImages.length)];
 
 // ─── 화면 4: 여행 생성 / 수정 ────────────────────────────────────────────────
 function CreateTripScreen({ onNavigate, onAddTrip, onUpdateTrip, editTrip }) {
@@ -187,7 +193,13 @@ function CreateTripScreen({ onNavigate, onAddTrip, onUpdateTrip, editTrip }) {
           label: item.category === "기타" && item.customCategory ? item.customCategory : item.category,
           amount: -Number(item.amount),
         }));
-      onAddTrip({ ...tripData, expenses: initialExpenses, coverImage: "", journalEntries: [] });
+      onAddTrip({
+        ...tripData,
+        expenses: initialExpenses,
+        coverImage: "",
+        randomImage: getRandomImage(),
+        journalEntries: []
+      });
     }
     onNavigate("home");
   };
@@ -274,7 +286,6 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [menuTargetId, setMenuTargetId] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
-  const defaultCoverImage = "/src/img/user_img/admin/Pic1.jpg";
 
   const handleDeleteConfirm = () => {
     onDeleteTrip(deleteTargetId);
@@ -337,8 +348,11 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
             <div key={trip.id} className="trip-card"
               onClick={() => { onSelectTrip(trip.id); onNavigate("tripDetail"); }}>
               <div className="trip-card-thumb">
-                <img src={trip.coverImage || defaultCoverImage}
-                  alt={`${trip.name} 대표 이미지`} className="trip-card-image" />
+                <img
+                  src={trip.coverImage || trip.randomImage || getRandomImage()}
+                  alt={`${trip.name} 대표 이미지`}
+                  className="trip-card-image"
+                />
               </div>
               <div className="trip-card-body">
                 <div className="trip-card-name">{trip.name}</div>
@@ -829,8 +843,6 @@ export default function App() {
           trip={selectedTrip}
         />
       );
-      case "expenseList":
-        return <ExpenseListScreen onNavigate={navigate} />;
       case "admin":
         return <AdminPage onNavigate={navigate} />;
       default:
@@ -855,7 +867,7 @@ export default function App() {
           {[
             ["login","로그인"],["register","회원가입"],["onboarding","온보딩"],
             ["home","홈"],["tripDetail","여행상세"],["tripJournal","후기작성"],
-            ["stats","통계"],["expenseList","지출목록"],["admin","관리자"],
+            ["stats","통계"],["admin","관리자"],
           ].map(([key, label]) => (
             <button key={key} className={`nav-btn${screen === key ? " active" : ""}`}
               onClick={() => { if (key !== "createTrip") setEditingTrip(null); setScreen(key); }}>
