@@ -4,6 +4,8 @@ import "./app.css";
 import AdminPage from "./pages/AdminPage";
 import StatsScreen from "./pages/StatsScreen";
 import TripJournalScreen from "./components/journal/TripJournalScreen";
+import { useAuthStore } from "./store/authStore";
+import { useNavigate, Link } from "react-router-dom";
 
 countries.registerLocale(ko);
 
@@ -50,31 +52,88 @@ function calcTotalSpent(trip) {
 }
 
 // ─── 화면 1: 로그인 ──────────────────────────────────────────────────────────
+const inputClass =
+    'w-full px-3 py-2.5 border border-slate-300 rounded-md text-sm bg-white ' +
+    'focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all';
+
 function LoginScreen({ onNavigate, onLogin }) {
-  const [name, setName] = useState("");
-  const [pw, setPw] = useState("");
-  return (
-    <div className="screen login-screen">
-      <div className="logo-wrapper">
-        <img src="/src/img/logo.png" alt="logo" className="logo" />
-      </div>
-      <h1 className="login-title">로그인</h1>
-      <div className="form-group">
-        <input className="input-field" placeholder="이름 입력" value={name}
-          onChange={(e) => setName(e.target.value)} />
-        <input className="input-field" placeholder="비밀번호 입력" type="password" value={pw}
-          onChange={(e) => setPw(e.target.value)} />
-        <p className="find-link">8자 이상 입력하세요</p>
-      </div>
-      <GreenButton fullWidth onClick={() => { onLogin(name.trim() || "관리자"); onNavigate("afterLogin"); }}>
-        로그인
-      </GreenButton>
-      <p className="sub-link">
-        계정이 없으신가요?{" "}
-        <span className="link" onClick={() => onNavigate("register")}>회원가입하기</span>
-      </p>
-    </div>
-  );
+  
+    const [email,    setEmail]    = useState('');
+    const [password, setPassword] = useState('');
+    const [loading,  setLoading]  = useState(false);
+
+    const { login } = useAuthStore();
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+          console.log("로그인 시도");
+            await login(email, password); 
+            console.log("로그인 성공");        // authStore → authApi → 서버
+            onNavigate("afterLogin");                  // 성공 시 온보딩 페이지로 이동
+        } catch (err) {
+          console.log("로그인 실패");
+            // axiosInstance 인터셉터가 서버 메시지로 err.message를 교체했습니다.
+            alert(err.message || '로그인에 실패했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="max-w-md mx-auto mt-4">
+            <div className="border border-slate-200 rounded-xl p-8">
+
+                <h3 className="text-lg font-semibold text-slate-700 border-l-4 border-blue-400 pl-3 mb-6">
+                    로그인
+                </h3>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+
+                    <div>
+                        <label className="block mb-1.5 font-semibold text-sm text-slate-500">이메일</label>
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            placeholder="예: admin@aa.com"
+                            required
+                            className={inputClass}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block mb-1.5 font-semibold text-sm text-slate-500">비밀번호</label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            placeholder="비밀번호를 입력하세요"
+                            required
+                            className={inputClass}
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="btn btn-primary w-full disabled:opacity-50"
+                    >
+                        {loading ? '로그인 중...' : '로그인'}
+                    </button>
+                </form>
+
+                <p className="text-sm text-slate-500 mt-5 text-center">
+                    계정이 없으신가요?{' '}
+                    <Link to="/register" className="text-blue-500 hover:underline font-semibold">
+                        회원가입
+                    </Link>
+                </p>
+
+            </div>
+        </div>
+    );
 }
 
 // ─── 화면 2: 회원가입 ────────────────────────────────────────────────────────
@@ -167,6 +226,9 @@ function CreateTripScreen({ onNavigate, onAddTrip, onUpdateTrip, editTrip }) {
   const addCategoryBudget = () =>
     setCategoryBudgets((prev) => [...prev, { category: "식비", amount: "", customCategory: "" }]);
 
+  const removeCategoryBudget = (index) =>
+    setCategoryBudgets((prev) => prev.filter((_, i) => i !== index));
+
   const handleBudgetChange = (index, field, value) =>
     setCategoryBudgets((prev) => { const u = [...prev]; u[index] = { ...u[index], [field]: value }; return u; });
 
@@ -207,7 +269,7 @@ function CreateTripScreen({ onNavigate, onAddTrip, onUpdateTrip, editTrip }) {
   return (
     <div className="screen create-trip-screen">
       <div className="top-bar">
-        <span className="back-arrow" onClick={() => onNavigate("back")}>←</span>
+        <span className="back-arrow" onClick={() => onNavigate(isEditMode ? "home" : "back")}>←</span>
         <span className="top-bar-title">{isEditMode ? "여행 수정하기" : "여행 기록하기"}</span>
       </div>
       <div className="create-form">
@@ -261,6 +323,24 @@ function CreateTripScreen({ onNavigate, onAddTrip, onUpdateTrip, editTrip }) {
               <input className="input-field" style={{ flex: 1.5, marginBottom: 0 }} type="number"
                 placeholder="금액" value={item.amount}
                 onChange={(e) => handleBudgetChange(index, "amount", e.target.value)} />
+              {categoryBudgets.length > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault();
+                  e.stopPropagation(); 
+                  removeCategoryBudget(index);
+                  }}      
+                  style={{
+                    background: "none", border: "none",
+                    cursor: "pointer", fontSize: "18px",
+                    color: "#9ca3af", padding: "0 4px",
+                    lineHeight: 1, flexShrink: 0,
+                  }}
+                  title="삭제"
+                >
+                  🗑️
+                </button>
+              )}
             </div>
             {item.category === "기타" && (
               <input className="input-field" style={{ marginTop: 8 }} placeholder="카테고리명 입력"
@@ -805,8 +885,8 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
 // ─── 메인 앱 ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [screen, setScreen] = useState("login");
-  const [trips, setTrips] = useState([TEST_TRIP]);
-  const [selectedTripId, setSelectedTripId] = useState(TEST_TRIP.id);
+  const [trips, setTrips] = useState([]);
+  const [selectedTripId, setSelectedTripId] = useState(null);
   const [prevScreen, setPrevScreen] = useState("home");
   const [userName, setUserName] = useState("관리자");
   const [editingTrip, setEditingTrip] = useState(null);
@@ -816,6 +896,7 @@ export default function App() {
   const navigate = (destination) => {
     if (destination === "afterLogin") { setScreen(trips.length === 0 ? "onboarding" : "home"); return; }
     if (destination === "back") { setScreen(prevScreen); return; }
+    if (destination === "createTrip") { setEditingTrip(null); }
     setPrevScreen(screen);
     setScreen(destination);
   };
