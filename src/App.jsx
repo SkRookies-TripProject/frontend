@@ -167,6 +167,9 @@ function CreateTripScreen({ onNavigate, onAddTrip, onUpdateTrip, editTrip }) {
   const addCategoryBudget = () =>
     setCategoryBudgets((prev) => [...prev, { category: "식비", amount: "", customCategory: "" }]);
 
+  const removeCategoryBudget = (index) =>
+    setCategoryBudgets((prev) => prev.filter((_, i) => i !== index));
+
   const handleBudgetChange = (index, field, value) =>
     setCategoryBudgets((prev) => { const u = [...prev]; u[index] = { ...u[index], [field]: value }; return u; });
 
@@ -207,7 +210,7 @@ function CreateTripScreen({ onNavigate, onAddTrip, onUpdateTrip, editTrip }) {
   return (
     <div className="screen create-trip-screen">
       <div className="top-bar">
-        <span className="back-arrow" onClick={() => onNavigate("back")}>←</span>
+        <span className="back-arrow" onClick={() => onNavigate(isEditMode ? "home" : "back")}>←</span>
         <span className="top-bar-title">{isEditMode ? "여행 수정하기" : "여행 기록하기"}</span>
       </div>
       <div className="create-form">
@@ -261,6 +264,24 @@ function CreateTripScreen({ onNavigate, onAddTrip, onUpdateTrip, editTrip }) {
               <input className="input-field" style={{ flex: 1.5, marginBottom: 0 }} type="number"
                 placeholder="금액" value={item.amount}
                 onChange={(e) => handleBudgetChange(index, "amount", e.target.value)} />
+              {categoryBudgets.length > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault();
+                  e.stopPropagation(); 
+                  removeCategoryBudget(index);
+                  }}      
+                  style={{
+                    background: "none", border: "none",
+                    cursor: "pointer", fontSize: "18px",
+                    color: "#9ca3af", padding: "0 4px",
+                    lineHeight: 1, flexShrink: 0,
+                  }}
+                  title="삭제"
+                >
+                  🗑️
+                </button>
+              )}
             </div>
             {item.category === "기타" && (
               <input className="input-field" style={{ marginTop: 8 }} placeholder="카테고리명 입력"
@@ -790,6 +811,7 @@ export default function App() {
   const navigate = (destination) => {
     if (destination === "afterLogin") { setScreen(trips.length === 0 ? "onboarding" : "home"); return; }
     if (destination === "back") { setScreen(prevScreen); return; }
+    if (destination === "createTrip") { setEditingTrip(null); }
     setPrevScreen(screen);
     setScreen(destination);
   };
