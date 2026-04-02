@@ -22,7 +22,7 @@ export default function StatsScreen({ onNavigate, trip }) {
     return (
       <div className="screen stats-screen">
         <div className="detail-header">
-          <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
+          <span className="home-icon" onClick={() => onNavigate("home")}>⌂</span>
           <span className="detail-title">여행 통계</span>
           <span className="menu-icon">☰</span>
         </div>
@@ -57,7 +57,7 @@ export default function StatsScreen({ onNavigate, trip }) {
   return (
     <div className="screen stats-screen">
       <div className="detail-header">
-        <span className="home-icon" onClick={() => onNavigate("home")}>🏠</span>
+        <span className="home-icon" onClick={() => onNavigate("home")}>⌂</span>
 <div className="detail-title-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, justifyContent: 'center', overflow: 'hidden' }}>
           {/* 국기 이미지 처리 (URL인 경우와 이모지인 경우 대응) */}
           {trip.flag && trip.flag.startsWith('http') ? (
