@@ -264,6 +264,29 @@ const defaultImages = Array.from({ length: 30 }, (_, i) =>
   const getRandomImage = () =>
     defaultImages[Math.floor(Math.random() * defaultImages.length)];
 
+// API baseURL에는 /api가 포함되어 있으므로 썸네일 경로 조합 시에는 origin만 사용합니다.
+function getBackendOrigin() {
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://25.2.109.64:8080/api";
+  return apiBaseUrl.replace(/\/api\/?$/, "");
+}
+
+// thumbnailPath가 있으면 백엔드 이미지를 우선 사용하고, 없으면 기존 대표/샘플 이미지로 fallback 합니다.
+function resolveTripImage(trip) {
+  if (trip?.thumbnailPath) {
+    if (trip.thumbnailPath.startsWith("http")) {
+      return trip.thumbnailPath;
+    }
+
+    const normalizedPath = trip.thumbnailPath.startsWith("/")
+      ? trip.thumbnailPath
+      : `/${trip.thumbnailPath}`;
+
+    return `${getBackendOrigin()}${normalizedPath}`;
+  }
+
+  return trip?.coverImage || trip?.randomImage || getRandomImage();
+}
+
 // ─── 화면 4: 여행 생성 / 수정 ────────────────────────────────────────────────
 function CreateTripScreen({ onNavigate, onAddTrip, onUpdateTrip, editTrip }) {
   const isEditMode = !!editTrip;
@@ -533,7 +556,7 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
               onClick={() => { onSelectTrip(trip.id); onNavigate("tripDetail"); }}>
               <div className="trip-card-thumb">
                 <img
-                  src={trip.coverImage || trip.randomImage || getRandomImage()}
+                  src={resolveTripImage(trip)}
                   alt={`${trip.name} 대표 이미지`}
                   className="trip-card-image"
                 />
@@ -1397,6 +1420,7 @@ export default function App() {
             country:        t.country,
             startDate:      t.startDate,
             endDate:        t.endDate,
+            thumbnailPath:  t.thumbnailPath ?? null,
             flag:           flagUrl,
             budget:         t.totalBudget
                               ? `총 ${Number(t.totalBudget).toLocaleString()}원`
@@ -1448,7 +1472,8 @@ export default function App() {
       ...prev,
       {
         ...newTrip,
-        id: saved.id,   
+        id: saved.id,
+        thumbnailPath: saved.thumbnailPath ?? null,
       },
     ]);
     setEditingTrip(null);
@@ -1458,34 +1483,37 @@ export default function App() {
     console.error(err);
   }
 };
-    //여행 수정
+   //여행 수정
   const handleUpdateTrip = async (updatedTrip) => {
-  try {
-    const budgets = (updatedTrip.budgetData || [])
-      .filter((item) => String(item.amount).trim() !== "" && Number(item.amount) > 0)
-      .map((item) => ({
-        category: item.category,
-        amount:   Number(item.amount),
-      }));
+    try {
+      const budgets = (updatedTrip.budgetData || [])
+        .filter((item) => String(item.amount).trim() !== "" && Number(item.amount) > 0)
+        .map((item) => ({
+          category: item.category,
+          amount: Number(item.amount),
+        }));
 
-    const requestData = {
-      title:     updatedTrip.name,
-      country:   updatedTrip.country,
-      startDate: updatedTrip.startDate,
-      endDate:   updatedTrip.endDate,
-      budgets,
-    };
+      if (screen !== "tripJournal") {
+        const requestData = {
+          title: updatedTrip.name,
+          country: updatedTrip.country,
+          startDate: updatedTrip.startDate,
+          endDate: updatedTrip.endDate,
+          budgets,
+        };
 
-    await updateTrip(updatedTrip.id, requestData);
-    setTrips((prev) =>
-      prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
-    );
-    if (screen !== "tripJournal") setEditingTrip(null);
-  } catch (err) {
-    alert("여행 수정에 실패했습니다.");
-    console.error(err);
-  }
-};
+        await updateTrip(updatedTrip.id, requestData);
+      }
+
+      setTrips((prev) =>
+        prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
+      );
+      if (screen !== "tripJournal") setEditingTrip(null);
+    } catch (err) {
+      alert("여행 수정에 실패했습니다.");
+      console.error(err);
+    }
+  };
   //여행 삭제
   const handleDeleteTrip = async (tripId) => {
   try {
