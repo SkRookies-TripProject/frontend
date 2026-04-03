@@ -7,6 +7,7 @@ import {
   updateJournalEntry,
 } from "../../api/journalEntries";
 
+// yyyy-mm-dd 형식 날짜 문자열을 Date 객체로 변환합니다.
 function parseLocalDate(dateString) {
   if (!dateString) return null;
 
@@ -16,6 +17,7 @@ function parseLocalDate(dateString) {
   return new Date(year, month - 1, day);
 }
 
+// 여행 시작일~종료일 사이의 날짜 탭 데이터를 생성합니다.
 function buildTripDays(trip) {
   const labels = ["일", "월", "화", "수", "목", "금", "토"];
   const start = parseLocalDate(trip?.startDate);
@@ -43,6 +45,7 @@ function buildTripDays(trip) {
   return days;
 }
 
+// createdAt / updatedAt 값을 화면용 시간 텍스트로 바꿉니다.
 function formatKoreanTime(dateLike) {
   if (!dateLike) return "";
 
@@ -54,6 +57,7 @@ function formatKoreanTime(dateLike) {
   }).format(new Date(dateLike));
 }
 
+// 백엔드 응답에서 id / entryId를 공통으로 처리하기 위한 헬퍼입니다.
 function getEntryId(entry) {
   return entry?.entryId ?? entry?.id ?? null;
 }
@@ -106,6 +110,7 @@ export default function TripJournalScreen({
   const selectedEntry =
     selectedEntries.find((entry) => entry.id === selectedEntryId) ?? null;
 
+  // 작성/수정 화면을 닫을 때 입력 상태를 초기화합니다.
   const resetEditor = () => {
     setMemo("");
     setReviewImages([]);
@@ -113,6 +118,7 @@ export default function TripJournalScreen({
     setEditingEntryId(null);
   };
 
+  // 여행이 바뀌면 현재 선택 상태와 날짜별 메모 캐시를 함께 초기화합니다.
   useEffect(() => {
     setSelectedDay(0);
     setSelectedEntryId(null);
@@ -121,6 +127,7 @@ export default function TripJournalScreen({
     setEntriesByDay({});
   }, [tripId]);
 
+  // 선택한 여행/날짜의 메모 목록을 서버에서 조회합니다.
   useEffect(() => {
     let isMounted = true;
 
@@ -183,6 +190,9 @@ export default function TripJournalScreen({
     ]);
   };
 
+  // 기록하기 버튼 클릭 시
+  // 1) 작성 모드 진입 또는
+  // 2) 생성/수정 API 호출을 수행합니다.
   const handleSaveReview = async () => {
     if (!isWriting) {
       setSelectedEntryId(null);
@@ -202,6 +212,7 @@ export default function TripJournalScreen({
     try {
       setIsSubmitting(true);
 
+      // 기존 메모 수정
       if (editingEntryId !== null) {
         const savedEntry = await updateJournalEntry(editingEntryId, payload);
         const nextEntry = {
@@ -223,6 +234,7 @@ export default function TripJournalScreen({
         return;
       }
 
+      // 새 메모 생성
       const savedEntry = await createJournalEntry(tripId, payload);
       const nextEntry = {
         ...hydrateEntry(savedEntry, selectedDay),
@@ -252,6 +264,7 @@ export default function TripJournalScreen({
     }
   };
 
+  // 이미지 API는 아직 없어 현재 화면 상태에서만 이미지 목록을 갱신합니다.
   const handleDeleteDetailImage = (imageIndex) => {
     if (!selectedEntry || !selectedRecordDate) return;
 
@@ -269,6 +282,7 @@ export default function TripJournalScreen({
     }));
   };
 
+  // 상세 화면에서 수정 버튼을 누르면 선택한 메모를 편집 상태로 전환합니다.
   const handleStartEditEntry = () => {
     if (!selectedEntry) return;
 
@@ -283,10 +297,12 @@ export default function TripJournalScreen({
     setIsWriting(true);
   };
 
+  // 삭제 확인 모달을 띄우기 위해 대상 메모 id를 저장합니다.
   const handleRequestDeleteEntry = (entryId) => {
     setDeleteEntryId(entryId);
   };
 
+  // 삭제 확인 시 서버 삭제 API를 호출하고 현재 날짜 목록에서 제거합니다.
   const handleConfirmDeleteEntry = async () => {
     if (!selectedRecordDate || deleteEntryId === null) {
       setDeleteEntryId(null);

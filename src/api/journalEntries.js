@@ -20,7 +20,7 @@ function normalizeEntry(entry) {
 // 여행 기준 메모 목록 조회
 // recordDate가 있으면 날짜별 조회, 없으면 전체 조회로 동작합니다.
 export async function listJournalEntries(tripId, recordDate) {
-  const response = await axios.get(`/api/trips/${tripId}/journal-entries`, {
+  const response = await axios.get(`/trips/${tripId}/journal-entries`, {
     params: recordDate ? { recordDate } : undefined,
   });
   const payload = unwrapApiData(response.data);
@@ -31,25 +31,25 @@ export async function listJournalEntries(tripId, recordDate) {
 
 // 메모 상세 조회
 export async function getJournalEntry(entryId) {
-  const response = await axios.get(`/api/journal-entries/${entryId}`);
+  const response = await axios.get(`/journal-entries/${entryId}`);
   return normalizeEntry(unwrapApiData(response.data));
 }
 
 // 메모 생성
 // body 예시: { recordDate: "2026-04-04", memo: "첫째 날 메모" }
 export async function createJournalEntry(tripId, body) {
-  const response = await axios.post(`/api/trips/${tripId}/journal-entries`, body);
+  const response = await axios.post(`/trips/${tripId}/journal-entries`, body);
   return normalizeEntry(unwrapApiData(response.data));
 }
 
 // 메모 수정
 export async function updateJournalEntry(entryId, body) {
-  const response = await axios.put(`/api/journal-entries/${entryId}`, body);
+  const response = await axios.put(`/journal-entries/${entryId}`, body);
   return normalizeEntry(unwrapApiData(response.data));
 }
 
 // 메모 삭제
 export async function deleteJournalEntry(entryId) {
-  const response = await axios.delete(`/api/journal-entries/${entryId}`);
+  const response = await axios.delete(`/journal-entries/${entryId}`);
   return unwrapApiData(response.data);
 }
