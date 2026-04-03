@@ -1,53 +1,77 @@
 import React, { useState, useEffect } from "react";
 import "../styles/dashboard.css";
 import { PieChart, Pie, Cell, Tooltip } from "recharts";
-import { getAdminDashboard } from "../api/adminApi";
+import { getAdminDashboard, getAdminStats } from "../api/adminApi";
 
 export default function AdminDashboard() {
 
+  // 🔥 KPI
   const [kpi, setKpi] = useState({
     totalUsers: 0,
     totalTrips: 0,
     totalExpenseAmount: 0,
   });
 
+  // 🔥 통계
+  const [topDestinations, setTopDestinations] = useState([]);
+  const [categoryData, setCategoryData] = useState([]);
+
   useEffect(() => {
+    console.log("토큰:", localStorage.getItem("auth_token"));
     fetchDashboard();
+    fetchStats();
   }, []);
 
+  // =========================
+  // KPI
+  // =========================
   const fetchDashboard = async () => {
     try {
       const res = await getAdminDashboard();
-
-      setKpi(res.data); // ⭐ ApiResponse.data
+      setKpi(res.data);
     } catch (err) {
       console.error(err);
     }
   };
 
-  const topDestinations = [
-    { name: "일본", count: 120 },
-    { name: "미국", count: 98 },
-    { name: "프랑스", count: 87 },
-    { name: "태국", count: 76 },
-    { name: "이탈리아", count: 65 },
-  ];
+  // =========================
+  // 🔥 통계 (핵심)
+  // =========================
+  const fetchStats = async () => {
+    try {
+      const res = await getAdminStats();
 
-  const categoryData = [
-    { name: "식비", value: 40 },
-    { name: "교통", value: 25 },
-    { name: "숙박", value: 20 },
-    { name: "기타", value: 15 },
-  ];
+      const data = res.data;
+
+      // 🔥 Top5 변환
+      setTopDestinations(
+        data.topDestinations.map((item) => ({
+          name: item.country,
+          count: item.count,
+        }))
+      );
+
+      // 🔥 카테고리 변환 (Recharts용)
+      setCategoryData(
+        data.categoryRatios.map((item) => ({
+          name: item.category,
+          value: item.percent,
+        }))
+      );
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const RANK_COLORS = [
-  "#FF6B6B", // 1위 빨강
-  "#4D96FF", // 2위 파랑
-  "#6BCB77", // 3위 초록
-  "#FFD93D", // 4위 노랑
-  "#845EC2", // 5위 보라
-];
+    "#FF6B6B",
+    "#4D96FF",
+    "#6BCB77",
+    "#FFD93D",
+    "#845EC2",
+  ];
 
-  // 🔥 다양한 색상
   const COLORS = ["#FF6B6B", "#4D96FF", "#6BCB77", "#FFD93D"];
 
   return (
@@ -84,15 +108,17 @@ export default function AdminDashboard() {
             {topDestinations.map((item, idx) => (
               <div key={idx} className="top-card">
 
-                <div className="rank-badge"
-                    style={{ background: RANK_COLORS[idx] }}>
-                {idx + 1}
+                <div
+                  className="rank-badge"
+                  style={{ background: RANK_COLORS[idx] }}
+                >
+                  {idx + 1}
                 </div>
 
                 <div className="top-info">
                   <div className="destination-name">{item.name}</div>
                   <div className="destination-count">
-                    {item.count}명 방문
+                    {item.count}건
                   </div>
                 </div>
               </div>
@@ -105,48 +131,47 @@ export default function AdminDashboard() {
           <h2 className="dashboard-title">카테고리 소비 비율</h2>
 
           <div className="chart-wrapper">
-          <PieChart width={320} height={320}>
-                <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={110}
-                    dataKey="value"
-                    labelLine={false}
-                    label={({ cx, cy, midAngle, outerRadius, percent, name }) => {
-                    if (!cx || !cy) return null; // 🔥 안전장치
+            <PieChart width={320} height={320}>
+              <Pie
+                data={categoryData}
+                cx="50%"
+                cy="50%"
+                outerRadius={110}
+                dataKey="value"
+                labelLine={false}
+                label={({ cx, cy, midAngle, outerRadius, percent, name }) => {
+                  if (!cx || !cy) return null;
 
-                    const RADIAN = Math.PI / 180;
-                    const radius = outerRadius * 0.6;
-                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                  const RADIAN = Math.PI / 180;
+                  const radius = outerRadius * 0.6;
+                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
-                    return (
-                        <text
-                        x={x}
-                        y={y}
-                        fill="#fff"   // 🔥 흰색 글씨
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        style={{ fontSize: "12px", fontWeight: "600" }}
-                        >
-                        {name} {(percent * 100).toFixed(0)}%
-                        </text>
-                    );
-                    }}
-                >
-                    {categoryData.map((entry, index) => (
-                    <Cell key={index} fill={COLORS[index]} />
-                    ))}
-                </Pie>
+                  return (
+                    <text
+                      x={x}
+                      y={y}
+                      fill="#fff"
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      style={{ fontSize: "12px", fontWeight: "600" }}
+                    >
+                      {name} {(percent * 100).toFixed(0)}%
+                    </text>
+                  );
+                }}
+              >
+                {categoryData.map((entry, index) => (
+                  <Cell key={index} fill={COLORS[index]} />
+                ))}
+              </Pie>
 
-                <Tooltip />
+              <Tooltip />
             </PieChart>
           </div>
         </div>
 
       </div>
-
     </div>
   );
 }
