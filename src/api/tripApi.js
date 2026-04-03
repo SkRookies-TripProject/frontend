@@ -29,3 +29,9 @@ export const deleteTrip = async (tripId) => {
   const response = await instance.delete(`/trips/${tripId}`);
   return response.data;
 };
+
+// 여행별 예산 목록 조회
+export const getTripBudgets = async (tripId) => {
+  const response = await instance.get(`/trips/${tripId}/budgets`);
+  return response.data;
+};
