@@ -1,8 +1,14 @@
 import instance from "./axios";
 
-// 관리자 대시보드 조회
+// 관리자 KPI 조회
 export const getAdminDashboard = async () => {
   const response = await instance.get("/admin/dashboard");
+  return response.data;
+};
+
+//  관리자 통계 (Top5 + 카테고리 비율) 
+export const getAdminStats = async () => {
+  const response = await instance.get("/admin/dashboard/stats");
   return response.data;
 };
 

@@ -1,15 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../styles/admin.css";
+import { getUsers, deleteUser, searchUsers } from '../api/adminApi';
 
-export default function AdminTable() {
-  const [users, setUsers] = useState(
-    Array.from({ length: 23 }, (_, i) => ({
-      id: i + 1,
-      name: "루키즈",
-      email: "test@naver.com",
-      date: "2026.01.01",
-    }))
-  );
+export default function AdminTable({ keyword }) {
+
+  const [users, setUsers] = useState([]);
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -17,7 +12,29 @@ export default function AdminTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // 🔥 현재 페이지 데이터
+  // 데이터 가져오기
+  useEffect(()=>{
+    fetchUsers();
+  },[keyword]);
+
+  const fetchUsers = async () => {
+    try {
+      let res;
+
+      if (!keyword || keyword.trim() === "") {
+        res = await getUsers();
+      } else {
+        res = await searchUsers(keyword);
+      }
+
+      setUsers(res.data); 
+      setCurrentPage(1);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  //  현재 페이지 데이터
   const start = (currentPage - 1) * itemsPerPage;
   const currentUsers = users.slice(start, start + itemsPerPage);
 
@@ -27,13 +44,18 @@ export default function AdminTable() {
     setIsModalOpen(true);
   };
 
-  // 삭제 확정
-  const handleConfirmDelete = () => {
-    setUsers(users.filter((u) => u.id !== selectedUser.id));
-    setIsModalOpen(false);
+  // 삭제 
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteUser(selectedUser.id);
+      await fetchUsers(); // 다시 불러오기
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  // 🔥 총 페이지 수
+  //  총 페이지 수
   const totalPages = Math.ceil(users.length / itemsPerPage);
 
   return (
@@ -54,7 +76,9 @@ export default function AdminTable() {
           <div>{user.id}</div>
           <div>{user.name}</div>
           <div className="email">{user.email}</div>
-          <div>{user.date}</div>
+          <div>
+            {new Date(user.createdAt).toLocaleDateString()}
+          </div>
           <div
             className="delete-btn"
             onClick={() => handleDeleteClick(user)}
@@ -64,7 +88,7 @@ export default function AdminTable() {
         </div>
       ))}
 
-      {/* 🔥 페이지네이션 */}
+      {/*  페이지네이션 */}
       <div className="pagination">
         {Array.from({ length: totalPages }, (_, i) => (
           <div

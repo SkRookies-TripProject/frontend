@@ -6,7 +6,7 @@ import StatsScreen from "./pages/StatsScreen";
 import TripJournalScreen from "./components/journal/TripJournalScreen";
 import { useAuthStore } from "./store/authStore";
 import { useNavigate, Link } from "react-router-dom";
-import { getTrips, createTrip, updateTrip, deleteTrip } from "./api/tripApi";
+import { getTrips, createTrip, updateTrip, deleteTrip, getTripBudgets } from "./api/tripApi";
 
 countries.registerLocale(ko);
 
@@ -1342,31 +1342,32 @@ export default function App() {
 };
     //여행 수정
   const handleUpdateTrip = async (updatedTrip) => {
-    try {
-      // ✅ 조건 없이 항상 API 호출
-      const requestData = {
-        title:     updatedTrip.name,
-        country:   updatedTrip.country,
-        startDate: updatedTrip.startDate,
-        endDate:   updatedTrip.endDate,
-        budgets:   (updatedTrip.budgetData || [])
-                    .filter((item) => Number(item.amount) > 0)
-                    .map((item) => ({
-                      category: item.category,
-                      amount:   Number(item.amount),
-                    })),
-      };
-      await updateTrip(updatedTrip.id, requestData);
+  try {
+    const budgets = (updatedTrip.budgetData || [])
+      .filter((item) => String(item.amount).trim() !== "" && Number(item.amount) > 0)
+      .map((item) => ({
+        category: item.category,
+        amount:   Number(item.amount),
+      }));
 
-      setTrips((prev) =>
-        prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
-      );
-      if (screen !== "tripJournal") setEditingTrip(null);
-    } catch (err) {
-      alert("여행 수정에 실패했습니다.");
-      console.error(err);
-    }
-  };
+    const requestData = {
+      title:     updatedTrip.name,
+      country:   updatedTrip.country,
+      startDate: updatedTrip.startDate,
+      endDate:   updatedTrip.endDate,
+      budgets,
+    };
+
+    await updateTrip(updatedTrip.id, requestData);
+    setTrips((prev) =>
+      prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
+    );
+    if (screen !== "tripJournal") setEditingTrip(null);
+  } catch (err) {
+    alert("여행 수정에 실패했습니다.");
+    console.error(err);
+  }
+};
   //여행 삭제
   const handleDeleteTrip = async (tripId) => {
   try {
@@ -1379,12 +1380,33 @@ export default function App() {
   }
 };
 
-  const handleEditTrip = (tripId) => {
+  const handleEditTrip = async (tripId) => {
     const target = trips.find((t) => t.id === tripId);
-    setEditingTrip(target);
+    try {
+      // ✅ DB에서 해당 여행의 카테고리별 예산 불러오기
+      const res = await getTripBudgets(tripId);
+      const budgetData = (res.data || []).map((b) => ({
+        category:       b.category,
+        amount:         String(b.amount),  // input에 표시하려면 string으로
+        customCategory: "",
+      }));
+
+      setEditingTrip({
+        ...target,
+        budgetData: budgetData.length > 0
+          ? budgetData
+          : [{ category: "식비", amount: "", customCategory: "" }],
+      });
+    } catch (err) {
+      console.error("예산 목록 불러오기 실패", err);
+      // 실패해도 수정 화면은 열어줌 — 빈 폼으로 시작
+      setEditingTrip({
+        ...target,
+        budgetData: [{ category: "식비", amount: "", customCategory: "" }],
+      });
+    }
     setScreen("createTrip");
   };
-
   const selectedTrip = trips.find((trip) => trip.id === selectedTripId) || null;
 
   const renderScreen = () => {
