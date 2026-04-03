@@ -183,6 +183,42 @@
   color: #fff;
 }
 
+/* 금액 필터 그룹 */
+.amount-filter-group {
+  display: flex;
+  gap: 6px;
+  padding: 6px 14px 10px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+/* 필터 버튼 */
+.amount-filter-btn {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--gray-200);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+/* 활성화 상태 */
+.amount-filter-btn.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* 클릭 느낌 */
+.amount-filter-btn:active {
+  transform: scale(0.95);
+}
+
 /* ─── 수정 모드 폼 ─────────────────────────────────────────────────────────── */
 
 .edit-form {
