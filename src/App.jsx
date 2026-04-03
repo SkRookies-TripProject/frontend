@@ -1449,34 +1449,37 @@ export default function App() {
     console.error(err);
   }
 };
-    //여행 수정
+   //여행 수정
   const handleUpdateTrip = async (updatedTrip) => {
-  try {
-    const budgets = (updatedTrip.budgetData || [])
-      .filter((item) => String(item.amount).trim() !== "" && Number(item.amount) > 0)
-      .map((item) => ({
-        category: item.category,
-        amount:   Number(item.amount),
-      }));
+    try {
+      const budgets = (updatedTrip.budgetData || [])
+        .filter((item) => String(item.amount).trim() !== "" && Number(item.amount) > 0)
+        .map((item) => ({
+          category: item.category,
+          amount: Number(item.amount),
+        }));
 
-    const requestData = {
-      title:     updatedTrip.name,
-      country:   updatedTrip.country,
-      startDate: updatedTrip.startDate,
-      endDate:   updatedTrip.endDate,
-      budgets,
-    };
+      if (screen !== "tripJournal") {
+        const requestData = {
+          title: updatedTrip.name,
+          country: updatedTrip.country,
+          startDate: updatedTrip.startDate,
+          endDate: updatedTrip.endDate,
+          budgets,
+        };
 
-    await updateTrip(updatedTrip.id, requestData);
-    setTrips((prev) =>
-      prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
-    );
-    if (screen !== "tripJournal") setEditingTrip(null);
-  } catch (err) {
-    alert("여행 수정에 실패했습니다.");
-    console.error(err);
-  }
-};
+        await updateTrip(updatedTrip.id, requestData);
+      }
+
+      setTrips((prev) =>
+        prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
+      );
+      if (screen !== "tripJournal") setEditingTrip(null);
+    } catch (err) {
+      alert("여행 수정에 실패했습니다.");
+      console.error(err);
+    }
+  };
   //여행 삭제
   const handleDeleteTrip = async (tripId) => {
   try {

@@ -17,6 +17,17 @@ function normalizeEntry(entry) {
   };
 }
 
+function normalizeAttachment(attachment) {
+  if (!attachment) {
+    return null;
+  }
+
+  return {
+    ...attachment,
+    attachmentId: attachment.attachmentId ?? attachment.id,
+  };
+}
+
 // 여행 기준 메모 목록 조회
 // recordDate가 있으면 날짜별 조회, 없으면 전체 조회로 동작합니다.
 export async function listJournalEntries(tripId, recordDate) {
@@ -42,6 +53,24 @@ export async function createJournalEntry(tripId, body) {
   return normalizeEntry(unwrapApiData(response.data));
 }
 
+export async function uploadJournalAttachments(entryId, files) {
+  const formData = new FormData();
+
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+
+  const response = await axios.post(`/journal-entries/${entryId}/attachments`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  const payload = unwrapApiData(response.data);
+  const attachments = Array.isArray(payload) ? payload : payload ? [payload] : [];
+
+  return attachments.map(normalizeAttachment).filter(Boolean);
+}
+
 // 메모 수정
 export async function updateJournalEntry(entryId, body) {
   const response = await axios.put(`/journal-entries/${entryId}`, body);
@@ -51,5 +80,10 @@ export async function updateJournalEntry(entryId, body) {
 // 메모 삭제
 export async function deleteJournalEntry(entryId) {
   const response = await axios.delete(`/journal-entries/${entryId}`);
+  return unwrapApiData(response.data);
+}
+
+export async function deleteJournalAttachment(attachmentId) {
+  const response = await axios.delete(`/attachments/${attachmentId}`);
   return unwrapApiData(response.data);
 }
