@@ -6,7 +6,7 @@ import StatsScreen from "./pages/StatsScreen";
 import TripJournalScreen from "./components/journal/TripJournalScreen";
 import { useAuthStore } from "./store/authStore";
 import { useNavigate, Link } from "react-router-dom";
-import { getTrips, createTrip, updateTrip, deleteTrip, getTripBudgets } from "./api/tripApi";
+import { getTrips, createTrip, updateTrip, deleteTrip, getTripBudgets, createExpense } from "./api/tripApi";
 
 countries.registerLocale(ko);
 
@@ -648,21 +648,55 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip }) {
   const removeDailyItem = (index) =>
     setDailyInputItems((prev) => prev.filter((_, i) => i !== index));
 
-  const saveDailyExpenses = () => {
+  const saveDailyExpenses = async () => {
     const validItems = dailyInputItems.filter((item) => Number(item.amount) > 0);
-    if (validItems.length === 0) { setIsDailyInputMode(false); return; }
-    const existing = (trip?.dailyExpenses || {})[selectedDate] || [];
-    const nextId = Date.now();
-    const newItems = validItems.map((item, i) => ({
-      id: nextId + i, date: selectedDate, category: item.category,
-      label: item.category, memo: item.memo, amount: -Math.abs(Number(item.amount)),
-    }));
-    onUpdateTrip({
-      ...trip,
-      dailyExpenses: { ...(trip.dailyExpenses || {}), [selectedDate]: [...existing, ...newItems] },
-    });
-    setIsDailyInputMode(false);
-    setDailyInputItems([{ category: "식비", amount: "", memo: "" }]);
+
+    if (validItems.length === 0) {
+      setIsDailyInputMode(false);
+      return;
+    }
+
+    try {
+      // ✅ 1. DB 저장 요청
+      await Promise.all(
+        validItems.map((item) =>
+          createExpense(trip.id, {
+            category: item.category,
+            amount: Number(item.amount),
+            date: selectedDate,
+            memo: item.memo || "",
+          })
+        )
+      );
+
+      // ✅ 2. 성공하면 기존 로직 유지 (UI 반영)
+      const existing = (trip?.dailyExpenses || {})[selectedDate] || [];
+      const nextId = Date.now();
+
+      const newItems = validItems.map((item, i) => ({
+        id: nextId + i,
+        date: selectedDate,
+        category: item.category,
+        label: item.category,
+        memo: item.memo,
+        amount: -Math.abs(Number(item.amount)),
+      }));
+
+      onUpdateTrip({
+        ...trip,
+        dailyExpenses: {
+          ...(trip.dailyExpenses || {}),
+          [selectedDate]: [...existing, ...newItems],
+        },
+      });
+
+      setIsDailyInputMode(false);
+      setDailyInputItems([{ category: "식비", amount: "", memo: "" }]);
+
+    } catch (err) {
+      console.error(err);
+      alert("지출 저장에 실패했습니다.");
+    }
   };
 
   if (!trip) {
