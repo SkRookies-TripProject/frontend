@@ -437,6 +437,7 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [menuTargetId, setMenuTargetId] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const { logout } = useAuthStore();
 
   const handleDeleteConfirm = () => {
     onDeleteTrip(deleteTargetId);
@@ -449,9 +450,9 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
       onClick={() => { setShowHeaderMenu(false); setMenuTargetId(null); }}>
       <div className="home-header">
         <span className="filter-icon"
-          onClick={(e) => { e.stopPropagation(); onNavigate("tripFilter"); }}>⌂</span>
+          onClick={(e) => { onNavigate("home"); }}>⌂</span>
         <span className="filter-serach-icon"
-          onClick={(e) => { e.stopPropagation(); onNavigate("tripFilter"); }}>✈</span>
+          onClick={(e) => { onNavigate("home"); }}>✈</span>
         <div style={{ position: "relative" }}>
           <span className="hamburger"
             onClick={(e) => { e.stopPropagation(); setShowHeaderMenu((prev) => !prev); }}>☰</span>
@@ -477,11 +478,40 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
                     onClick={() => { setShowHeaderMenu(false); setDeleteTargetId(menuTargetId); }}>
                     🗑️ 여행 삭제하기
                   </div>
+                  <div style={{ height: "1px", background: "#e5e7eb" }} />
+                  <div style={{ padding: "10px 16px", cursor: "pointer", display: "flex",
+                    alignItems: "center", gap: "8px", fontSize: "13px", color: "#374151" }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    onClick={() => {
+                      if (window.confirm("로그아웃 하시겠습니까?")) {
+                        setShowHeaderMenu(false);
+                        logout();
+                        onNavigate("login");
+                      }
+                    }}>
+                    ↩ 로그아웃
+                  </div>
                 </>
               ) : (
                 <div style={{ padding: "12px 16px", fontSize: "13px", color: "#9ca3af" }}>
                   여행을 먼저 선택해주세요
+                  <div style={{ height: "1px", background: "#e5e7eb" }} />
+                  <div style={{ padding: "10px 16px", cursor: "pointer", display: "flex",
+                    alignItems: "center", gap: "8px", fontSize: "13px", color: "#374151" }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    onClick={() => {
+                      if (window.confirm("로그아웃 하시겠습니까?")) {
+                        setShowHeaderMenu(false);
+                        logout();
+                        onNavigate("login");
+                      }
+                    }}>
+                    ↩ 로그아웃
+                  </div>
                 </div>
+                
               )}
             </div>
           )}
