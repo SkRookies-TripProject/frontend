@@ -624,13 +624,21 @@ export default function TripJournalScreen({
       ) : selectedEntries.length > 0 ? (
         <div className="journal-entry-list">
           {selectedEntries.map((entry) => (
-            <button
+            <div
               key={entry.id}
-              type="button"
               className="journal-entry-card"
               onClick={() => {
                 setIsWriting(false);
                 setSelectedEntryId(entry.id);
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setIsWriting(false);
+                  setSelectedEntryId(entry.id);
+                }
               }}
             >
               <div className="journal-entry-top">
@@ -652,7 +660,7 @@ export default function TripJournalScreen({
                   삭제
                 </button>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       ) : (
