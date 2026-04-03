@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";import countries from "i18n-iso-countries";
+import { useEffect, useState, useRef } from "react";import countries from "i18n-iso-countries";
 import ko from "i18n-iso-countries/langs/ko.json";
 import "./app.css";
 import AdminPage from "./pages/AdminPage";
@@ -572,6 +572,14 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPrices, setEditPrices] = useState({});
+  const [ocrTargetId, setOcrTargetId] = useState(null);
+  const [ocrPreview, setOcrPreview] = useState(null);
+  const [receiptList, setReceiptList] = useState({}); // { expenseId: [{amount, storeName}, ...] }
+  const [showOcrOptions, setShowOcrOptions] = useState(false);
+  const [showWebcam, setShowWebcam] = useState(false);
+  const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
   const [sortOrder, setSortOrder] = useState("latest");
   const [amountFilter, setAmountFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState(trip?.startDate ?? null);
@@ -679,6 +687,103 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
     }
     setIsEditMode(false);
   };
+  
+  const handleReceiptClick = (expenseId) => {
+    setOcrTargetId(expenseId);
+    setShowOcrOptions(true);
+  };
+
+  const handleOpenWebcam = async () => {
+    setShowOcrOptions(false);
+    setShowWebcam(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setTimeout(() => {
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      }, 100);
+    } catch {
+      alert("웹캠에 접근할 수 없어요.");
+      setShowWebcam(false);
+    }
+  };
+
+  const handleCapture = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    const base64 = canvas.toDataURL("image/jpeg").split(",")[1];
+    video.srcObject?.getTracks().forEach((track) => track.stop());
+    setShowWebcam(false);
+    sendToOcr(base64);
+  };
+
+  const handleCloseWebcam = () => {
+    videoRef.current?.srcObject?.getTracks().forEach((track) => track.stop());
+    setShowWebcam(false);
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file || ocrTargetId === null) return;
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(",")[1]);
+      reader.readAsDataURL(file);
+    });
+    sendToOcr(base64);
+    e.target.value = "";
+  };
+
+  const sendToOcr = async (base64) => {
+    try {
+      const response = await fetch("http://25.2.125.100:8080/api/receipt/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64 }),
+      });
+      if (!response.ok) throw new Error("서버 오류");
+      const result = await response.json();
+      const amount = result.total;
+      const storeName = result.storeName ?? "영수증";
+
+      if (amount) {
+        // ✅ 모달 대신 목록에 바로 추가
+        setReceiptList((prev) => ({
+          ...prev,
+          [ocrTargetId]: [...(prev[ocrTargetId] || []), { id: Date.now(), storeName, amount }],
+        }));
+      } else {
+        alert("금액을 인식하지 못했어요. 직접 입력해 주세요.");
+      }
+    } catch {
+      alert("영수증 인식에 실패했어요. 다시 시도해 주세요.");
+    }
+  };
+
+  const handleDeleteReceipt = (expenseId, receiptId) => {
+    setReceiptList((prev) => ({
+      ...prev,
+      [expenseId]: (prev[expenseId] || []).filter((r) => r.id !== receiptId),
+    }));
+  };
+
+  const handleApplyReceipts = (expenseId) => {
+    const list = receiptList[expenseId] || [];
+    const receiptTotal = list.reduce((sum, r) => sum + r.amount, 0);
+    // 기존 입력값 + 영수증 합계
+    const existing = Number(editPrices[expenseId]) || 0;
+    setEditPrices((prev) => ({ ...prev, [expenseId]: String(existing + receiptTotal) }));
+    setReceiptList((prev) => ({ ...prev, [expenseId]: [] }));
+  };
+
+  const handleOcrApply = () => {
+    if (!ocrPreview) return;
+    setEditPrices((prev) => ({ ...prev, [ocrPreview.id]: String(ocrPreview.amount) }));
+    setOcrPreview(null);
+  };
 
   // ★ 수정 모드에서 특정 지출 항목 삭제
   const handleDeleteExpense = (targetId) => {
@@ -723,36 +828,172 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
             </p>
           ) : (
             editTargets.map((e) => (
-              <div key={e.id} className="edit-expense-row">
-                {/* 라벨 + 날짜 */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span className="edit-expense-label">{e.label}</span>
-                  {e.date && (
-                    <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
-                      {e.date.replace(/-/g, ".")}
+              <div key={e.id} style={{ marginBottom: 12 }}>
+                <div className="edit-expense-row">
+                  {/* 라벨 + 날짜 */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span className="edit-expense-label">{e.label}</span>
+                    {e.date && (
+                      <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
+                        {e.date.replace(/-/g, ".")}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 영수증 버튼 + 금액 입력 */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <button
+                      onClick={() => handleReceiptClick(e.id)}
+                      style={{
+                        fontSize: 11, color: "#2ecc71", border: "1px solid #2ecc71",
+                        borderRadius: 6, padding: "3px 8px", background: "transparent",
+                        cursor: "pointer", whiteSpace: "nowrap",
+                      }}
+                    >
+                      📄 영수증
+                    </button>
+                    <div className="edit-expense-input-wrap">
+                      <input className="input-field edit-amount-input" type="number"
+                        value={editPrices[e.id] ?? ""}
+                        onChange={(ev) =>
+                          setEditPrices((prev) => ({ ...prev, [e.id]: ev.target.value }))} />
+                      <span className="edit-expense-unit">원</span>
                     </div>
-                  )}
+                  </div>
+
+                  {/* 항목 삭제 버튼 */}
+                  <button className="expense-delete-btn"
+                    onClick={() => handleDeleteExpense(e.id)} title="이 항목 삭제">
+                    🗑️
+                  </button>
                 </div>
 
-                {/* 금액 입력 */}
-                <div className="edit-expense-input-wrap">
-                  <input className="input-field edit-amount-input" type="number"
-                    value={editPrices[e.id] ?? ""}
-                    onChange={(ev) =>
-                      setEditPrices((prev) => ({ ...prev, [e.id]: ev.target.value }))} />
-                  <span className="edit-expense-unit">원</span>
-                </div>
+                {/* ✅ 영수증 목록 */}
+                {(receiptList[e.id] || []).length > 0 && (
+                  <div style={{ marginTop: 6, marginLeft: 4, padding: "8px 10px",
+                    background: "#1a2535", borderRadius: 8, fontSize: 12 }}>
+                    {(receiptList[e.id] || []).map((receipt) => (
+                      <div key={receipt.id}
+                        style={{ display: "flex", justifyContent: "space-between",
+                          alignItems: "center", padding: "4px 0",
+                          borderBottom: "1px solid #2e3d4f" }}>
+                        <span style={{ color: "#ccc" }}>🧾 {receipt.storeName}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ color: "#2ecc71", fontWeight: 600 }}>
+                            {receipt.amount.toLocaleString()}원
+                          </span>
+                          <button
+                            onClick={() => handleDeleteReceipt(e.id, receipt.id)}
+                            style={{ background: "none", border: "none", color: "#f87171",
+                              cursor: "pointer", fontSize: 13, padding: 0 }}>
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
 
-                {/* ★ 항목 삭제 버튼 */}
-                <button className="expense-delete-btn"
-                  onClick={() => handleDeleteExpense(e.id)}
-                  title="이 항목 삭제">
-                  🗑️
+                    {/* 합계 + 적용 버튼 */}
+                    <div style={{ display: "flex", justifyContent: "space-between",
+                      alignItems: "center", marginTop: 6 }}>
+                      <span style={{ color: "#aaa" }}>
+                        합계{" "}
+                        <span style={{ color: "#fff", fontWeight: 700 }}>
+                          {/* 기존값 + 영수증 합계 */}
+                          {((Number(editPrices[e.id]) || 0) + (receiptList[e.id] || []).reduce((s, r) => s + r.amount, 0)).toLocaleString()}원
+                        </span>
+                      </span>
+                      <button
+                        onClick={() => handleApplyReceipts(e.id)}
+                        style={{ fontSize: 11, color: "#fff", background: "#2ecc71",
+                          border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontWeight: 600 }}>
+                        합산 적용
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )))} 
+        </div>
+
+        {/* 파일/웹캠 선택 모달 */}
+        {showOcrOptions && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+            <div style={{ background: "#1e2a38", borderRadius: 14, padding: 24, width: 260, textAlign: "center" }}>
+              <p style={{ color: "#fff", fontSize: 14, marginBottom: 20 }}>영수증 입력 방법 선택</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <button onClick={() => { setShowOcrOptions(false); fileInputRef.current.click(); }}
+                  style={{ padding: 12, borderRadius: 8, border: "1px solid #555",
+                    background: "transparent", color: "#fff", cursor: "pointer", fontSize: 13 }}>
+                  📁 파일 업로드
+                </button>
+                <button onClick={handleOpenWebcam}
+                  style={{ padding: 12, borderRadius: 8, border: "none",
+                    background: "#2ecc71", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                  📷 웹캠 촬영
+                </button>
+                <button onClick={() => setShowOcrOptions(false)}
+                  style={{ padding: 8, borderRadius: 8, border: "none",
+                    background: "transparent", color: "#aaa", cursor: "pointer", fontSize: 12 }}>
+                  취소
                 </button>
               </div>
-            ))
-          )}
-        </div>
+            </div>
+          </div>
+        )}
+
+        {/* 웹캠 촬영 모달 */}
+        {showWebcam && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.85)",
+            display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", zIndex: 100, gap: 12 }}>
+            <video ref={videoRef} autoPlay playsInline
+              style={{ width: "100%", maxWidth: 300, borderRadius: 10 }} />
+            <canvas ref={canvasRef} style={{ display: "none" }} />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={handleCloseWebcam}
+                style={{ padding: "10px 20px", borderRadius: 8, border: "1px solid #555",
+                  background: "transparent", color: "#aaa", cursor: "pointer" }}>
+                취소
+              </button>
+              <button onClick={handleCapture}
+                style={{ padding: "10px 24px", borderRadius: 8, border: "none",
+                  background: "#2ecc71", color: "#fff", fontWeight: 600, cursor: "pointer" }}>
+                📷 촬영
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* OCR 금액 확인 모달 */}
+        {ocrPreview && (
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+            <div style={{ background: "#1e2a38", borderRadius: 14, padding: 24, width: 260, textAlign: "center" }}>
+              <p style={{ color: "#fff", fontSize: 14, marginBottom: 8 }}>영수증에서 금액을 인식했어요</p>
+              <p style={{ color: "#2ecc71", fontSize: 28, fontWeight: 700, margin: "12px 0" }}>
+                {ocrPreview.amount.toLocaleString()}원
+              </p>
+              <p style={{ color: "#aaa", fontSize: 12, marginBottom: 20 }}>이 금액을 적용할까요?</p>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setOcrPreview(null)}
+                  style={{ flex: 1, padding: 10, borderRadius: 8, border: "1px solid #555",
+                    background: "transparent", color: "#aaa", cursor: "pointer" }}>
+                  취소
+                </button>
+                <button onClick={handleOcrApply}
+                  style={{ flex: 1, padding: 10, borderRadius: 8, border: "none",
+                    background: "#2ecc71", color: "#fff", fontWeight: 600, cursor: "pointer" }}>
+                  적용
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* hidden file input */}
+        <input ref={fileInputRef} type="file" accept="image/*"
+          style={{ display: "none" }} onChange={handleFileChange} />
 
         <div style={{ flex: 1 }} />
         <GreenButton fullWidth onClick={handleSave}>저장하기</GreenButton>
