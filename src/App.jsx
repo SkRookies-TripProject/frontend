@@ -280,6 +280,7 @@ function CreateTripScreen({ onNavigate, onAddTrip, onUpdateTrip, editTrip }) {
   const [selectedCountry, setSelectedCountry] = useState(initialCountry);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredCountries, setFilteredCountries] = useState([]);
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
 
   const handleCountryInput = (e) => {
     const value = e.target.value;
@@ -597,7 +598,7 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
 const CATEGORIES = ["ALL", "식비", "교통", "숙박", "관광", "쇼핑", "기타"];
 
 // ─── 화면 6: 여행 상세 ───────────────────────────────────────────────────────
-function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
+function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip }) {
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [isEditMode, setIsEditMode] = useState(false);
   const [editName, setEditName] = useState("");
@@ -618,6 +619,10 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   const getDefaultCategory = () => {
     return activeCategory === "ALL" ? "식비" : activeCategory;
   };
+  const { logout } = useAuthStore();
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+
+  const [selectedTrip, setSelectedTrip] = useState(null);
 
   useEffect(() => {
     setSelectedDate(trip?.startDate ?? null);
@@ -1043,7 +1048,109 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
           ) : <span>{trip.flag || "🌍"}</span>}
           <span className="detail-title" style={{ fontSize: "16px", fontWeight: "bold" }}>{trip.name}</span>
         </div>
-        <span className="menu-icon">☰</span>
+        <span
+          className="hamburger"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowHeaderMenu((prev) => !prev);
+          }}
+        >
+          ☰
+        </span>
+
+        {showHeaderMenu && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "absolute",
+              top: 45,
+              right: 0,
+              background: "#fff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+              zIndex: 100,
+              minWidth: "150px",
+              overflow: "hidden"
+            }}
+          >
+            {/* ✏️ 여행 수정 */}
+            <div
+              style={{
+                padding: "10px 16px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "13px",
+                color: "#374151"
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#f3f4f6"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+              onClick={() => {
+                setShowHeaderMenu(false);
+                onNavigate("editTrip", trip);
+              }}
+            >
+              ✏️ 여행 수정하기
+            </div>
+
+            <div style={{ height: "1px", background: "#e5e7eb" }} />
+
+            {/* 🗑️ 여행 삭제 */}
+            <div
+              style={{
+                padding: "10px 16px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "13px",
+                color: "#ef4444"
+              }}
+              
+              onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+              onClick={async () => {
+                if (window.confirm("이 여행을 삭제하시겠습니까?")) {
+                  setShowHeaderMenu(false);
+
+                  await onDeleteTrip(trip.id); 
+
+                  onNavigate("home");
+                }
+              }}
+            >
+              🗑️ 여행 삭제하기
+            </div>
+
+            <div style={{ height: "1px", background: "#e5e7eb" }} />
+
+            {/* ↩ 로그아웃 */}
+            <div
+              style={{
+                padding: "10px 16px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "13px",
+                color: "#374151"
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+              onClick={() => {
+                if (window.confirm("로그아웃 하시겠습니까?")) {
+                  setShowHeaderMenu(false);
+                  logout();
+                  onNavigate("login");
+                }
+              }}
+            >
+              ↩ 로그아웃
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ① 예산 요약 */}
@@ -1240,7 +1347,7 @@ export default function App() {
   };
 
   // ✅ navigate — afterLogin 시 여행 목록 불러오기
-  const navigate = async (destination) => {
+  const navigate = async (destination, data) => {
     if (destination === "afterLogin") {
       // 로그인 직후 여행 목록 DB에서 불러오기
       try {
@@ -1278,6 +1385,8 @@ export default function App() {
     }
     if (destination === "back") { setScreen(prevScreen); return; }
     if (destination === "createTrip") { setEditingTrip(null); }
+    if (destination === "editTrip") { setEditingTrip(data); setScreen("createTrip"); return;}
+
     setPrevScreen(screen);
     setScreen(destination);
   };
@@ -1374,7 +1483,7 @@ export default function App() {
         return <HomeScreen trips={trips} onNavigate={navigate} onSelectTrip={setSelectedTripId}
           onDeleteTrip={handleDeleteTrip} onEditTrip={handleEditTrip} userName={userName} />;
       case "tripDetail":
-        return <TripDetailScreen onNavigate={navigate} trip={selectedTrip} onUpdateTrip={handleUpdateTrip} />;
+        return <TripDetailScreen onNavigate={navigate} trip={selectedTrip} onUpdateTrip={handleUpdateTrip} onDeleteTrip={handleDeleteTrip} />;
       case "tripJournal":
         return <TripJournalScreen onNavigate={navigate} trip={selectedTrip}
           onUpdateTrip={handleUpdateTrip}
