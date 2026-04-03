@@ -437,6 +437,7 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [menuTargetId, setMenuTargetId] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const { logout } = useAuthStore();
 
   const handleDeleteConfirm = () => {
     onDeleteTrip(deleteTargetId);
@@ -449,9 +450,9 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
       onClick={() => { setShowHeaderMenu(false); setMenuTargetId(null); }}>
       <div className="home-header">
         <span className="filter-icon"
-          onClick={(e) => { e.stopPropagation(); onNavigate("tripFilter"); }}>⌂</span>
+          onClick={(e) => { onNavigate("home"); }}>⌂</span>
         <span className="filter-serach-icon"
-          onClick={(e) => { e.stopPropagation(); onNavigate("tripFilter"); }}>✈</span>
+          onClick={(e) => { onNavigate("home"); }}>✈</span>
         <div style={{ position: "relative" }}>
           <span className="hamburger"
             onClick={(e) => { e.stopPropagation(); setShowHeaderMenu((prev) => !prev); }}>☰</span>
@@ -496,6 +497,7 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
                 <div style={{ padding: "12px 16px", fontSize: "13px", color: "#9ca3af" }}>
                   여행을 먼저 선택해주세요
                 </div>
+                
               )}
             </div>
           )}
