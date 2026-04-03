@@ -1,10 +1,21 @@
-import React from "react";
+import React, {useEffect} from "react";
 import AdminTable from "../components/AdminTable";
 import AdminDashboard from "../components/AdminDashboard";
 import "../styles/admin.css";
 import logo from "../img/logo.png";
+import { useAuthStore } from "../store/authStore";
 
 export default function AdminPage({ onNavigate }) {
+
+  const { role } = useAuthStore();
+
+  useEffect(() => {
+    if (role !== "ADMIN") {
+      alert("관리자만 접근 가능합니다");
+      onNavigate("login"); 
+    }
+  }, [role]);
+
   return (
     <div className="admin-page">
 
