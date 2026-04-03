@@ -20,7 +20,10 @@ export class AuthApi {
     // 성공 시 JWT 토큰 문자열을 반환합니다.
     async login(email, password) {
         const { data } = await axios.post('/api/auth/login', { email, password });
-        return data; // plain text JWT 토큰
+        return {
+        token: data.data.accessToken, //  accessToken
+        role: data.data.role
+    };
     }
 
     // 회원 가입
