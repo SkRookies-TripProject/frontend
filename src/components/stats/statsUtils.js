@@ -141,19 +141,19 @@ const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 export const CATEGORY_LABELS = {
   FOOD: "식비",
   TRANSPORT: "교통",
-  ACCOMMODATION: "숙박",
-  TOURISM: "관광",
+  LODGING: "숙박",
+  SIGHTSEEING: "관광",
   SHOPPING: "쇼핑",
-  ETC: "기타",
+  OTHER: "기타",
 };
 
 export const CATEGORY_COLORS = {
   FOOD: "#34d399",
   TRANSPORT: "#60a5fa",
-  ACCOMMODATION: "#a78bfa",
-  TOURISM: "#fbbf24",
+  LODGING: "#a78bfa",
+  SIGHTSEEING: "#fbbf24",
   SHOPPING: "#f87171",
-  ETC: "#94a3b8",
+  OTHER: "#94a3b8",
 };
 
 function parseLocalDate(dateString) {
@@ -222,7 +222,42 @@ export function buildCategoryStatsFromApi(statisticsData) {
 
 /*
 ====================================================
-추가 2) statistics.dailyExpenses -> 달력용 calendarData 변환
+추가 2) 선택 날짜 기준 사용 금액 계산
+====================================================
+*/
+export function getSpentAmountBySelectedDate(statisticsData, selectedDate) {
+  if (!selectedDate) return Number(statisticsData?.totalSpent || 0);
+  return Number(statisticsData?.dailyAmounts?.[selectedDate] || 0);
+}
+
+/*
+====================================================
+추가 3) 선택 날짜 기준 카테고리 통계 계산
+====================================================
+*/
+export function buildCategoryStatsBySelectedDate(statisticsData, selectedDate) {
+  if (!selectedDate) {
+    return buildCategoryStatsFromApi(statisticsData);
+  }
+
+  const amounts = statisticsData?.dailyCategoryAmounts?.[selectedDate] || {};
+  const total = Number(statisticsData?.dailyAmounts?.[selectedDate] || 0);
+
+  return Object.entries(CATEGORY_LABELS).map(([category, label]) => {
+    const amount = Number(amounts[category] || 0);
+
+    return {
+      label,
+      amount,
+      pct: total === 0 ? 0 : Number(((amount / total) * 100).toFixed(1)),
+      color: CATEGORY_COLORS[category] || "#cbd5e1",
+    };
+  });
+}
+
+/*
+====================================================
+추가 4) statistics.dailyExpenses -> 달력용 calendarData 변환
 ====================================================
 */
 export function buildMonthlyExpenseCalendarFromApi(
@@ -277,7 +312,7 @@ export function buildMonthlyExpenseCalendarFromApi(
 
 /*
 ====================================================
-추가 3) budget-summary 응답 -> BudgetSummary props용 정리
+추가 5) budget-summary 응답 -> BudgetSummary props용 정리
 실제로는 거의 그대로 쓰지만, 안전하게 숫자화해서 반환
 ====================================================
 */

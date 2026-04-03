@@ -8,9 +8,10 @@ import MonthlyExpenseCalendar from "../components/stats/MonthlyExpenseCalendar";
 import {
   buildTripDays,
   formatDateRange,
-  buildCategoryStatsFromApi,
+  buildCategoryStatsBySelectedDate,
   buildMonthlyExpenseCalendarFromApi,
   normalizeBudgetSummaryFromApi,
+  getSpentAmountBySelectedDate,
 } from "../components/stats/statsUtils";
 
 /*
@@ -45,6 +46,10 @@ export default function StatsScreen({ onNavigate, trip }) {
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const handleDateClick = (dateKey) => {
+    setSelectedDate((prev) => (prev === dateKey ? null : dateKey));
+  };
 
   if (!trip) {
     return (
@@ -102,9 +107,9 @@ export default function StatsScreen({ onNavigate, trip }) {
 
       try {
         const [budgetRes, statisticsRes] = await Promise.all([
-        axiosInstance.get(`/trips/${trip.id}/budget-summary`),
-        axiosInstance.get(`/trips/${trip.id}/statistics`),
-      ]);
+          axiosInstance.get(`/trips/${trip.id}/budget-summary`),
+          axiosInstance.get(`/trips/${trip.id}/statistics`),
+        ]);
 
         setBudgetSummary(budgetRes.data?.data || null);
         setStatistics(statisticsRes.data?.data || null);
@@ -129,15 +134,12 @@ export default function StatsScreen({ onNavigate, trip }) {
     [budgetSummary]
   );
 
+  const spentAmount = useMemo(() => {
+    return getSpentAmountBySelectedDate(statistics, selectedDate);
+  }, [statistics, selectedDate]);
+
   const stats = useMemo(() => {
-    const allStats = buildCategoryStatsFromApi(statistics);
-
-    if (!selectedDate) return allStats;
-
-    // 현재 백엔드 statistics 응답은 전체 통계 기준이라
-    // 날짜 탭 클릭 시 카테고리별 필터링은 아직 적용되지 않음.
-    // 전체 통계 그대로 보여주고, 나중에 날짜별 상세 API가 생기면 연결 가능.
-    return allStats;
+    return buildCategoryStatsBySelectedDate(statistics, selectedDate);
   }, [statistics, selectedDate]);
 
   const calendarData = useMemo(() => {
@@ -201,7 +203,7 @@ export default function StatsScreen({ onNavigate, trip }) {
         <TripDayTabs
           days={tripDays}
           selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
+          onSelectDate={handleDateClick}
         />
 
         <div
@@ -239,7 +241,7 @@ export default function StatsScreen({ onNavigate, trip }) {
 
         <BudgetSummary
           totalBudget={normalizedBudget.totalBudget}
-          spentAmount={normalizedBudget.spentAmount}
+          spentAmount={spentAmount}
           remainingBudget={normalizedBudget.remainingBudget}
         />
 
@@ -247,7 +249,7 @@ export default function StatsScreen({ onNavigate, trip }) {
           <span>{formatDateRange(trip.startDate, trip.endDate)}</span>
         </div>
 
-        <CategoryDonutChart stats={stats} />
+        <CategoryDonutChart stats={stats} totalSpent={spentAmount} />
         <StatsLegend stats={stats} />
         <MonthlyExpenseCalendar calendarData={calendarData} />
       </div>
