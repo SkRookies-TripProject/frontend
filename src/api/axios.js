@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getStoredAccessToken } from "./authStorage";
 
 const instance = axios.create({
   baseURL: "http://25.2.109.64:8080/api",
@@ -7,7 +8,7 @@ const instance = axios.create({
 // 요청마다 토큰 자동 추가
 instance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("accessToken");
+    const token = getStoredAccessToken();
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
