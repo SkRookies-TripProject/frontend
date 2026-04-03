@@ -1314,19 +1314,21 @@ export default function App() {
   const handleUpdateTrip = async (updatedTrip) => {
     try {
       // ✅ 조건 없이 항상 API 호출
-      const requestData = {
-        title:     updatedTrip.name,
-        country:   updatedTrip.country,
-        startDate: updatedTrip.startDate,
-        endDate:   updatedTrip.endDate,
-        budgets:   (updatedTrip.budgetData || [])
-                    .filter((item) => Number(item.amount) > 0)
-                    .map((item) => ({
-                      category: item.category,
-                      amount:   Number(item.amount),
-                    })),
-      };
-      await updateTrip(updatedTrip.id, requestData);
+      if (screen !== "tripJournal") {
+        const requestData = {
+          title:     updatedTrip.name,
+          country:   updatedTrip.country,
+          startDate: updatedTrip.startDate,
+          endDate:   updatedTrip.endDate,
+          budgets:   (updatedTrip.budgetData || [])
+                      .filter((item) => Number(item.amount) > 0)
+                      .map((item) => ({
+                        category: item.category,
+                        amount:   Number(item.amount),
+                      })),
+        };
+        await updateTrip(updatedTrip.id, requestData);
+      }
 
       setTrips((prev) =>
         prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))

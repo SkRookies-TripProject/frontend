@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { getStoredAccessToken } from "../../api/authStorage";
 import {
   createJournalEntry,
+  deleteJournalAttachment,
   deleteJournalEntry,
   listJournalEntries,
+  uploadJournalAttachments,
   updateJournalEntry,
 } from "../../api/journalEntries";
 
@@ -69,6 +71,85 @@ function buildDateText(recordDate) {
   return `${parsed.getMonth() + 1}월${parsed.getDate()}일`;
 }
 
+function getBackendOrigin() {
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://25.2.109.64:8080/api";
+  return apiBaseUrl.replace(/\/api\/?$/, "");
+}
+
+function resolveAttachmentUrl(filePath) {
+  if (!filePath) return "";
+  if (filePath.startsWith("http")) return filePath;
+
+  const normalizedPath = filePath.startsWith("/") ? filePath : `/${filePath}`;
+  return `${getBackendOrigin()}${normalizedPath}`;
+}
+
+function normalizeImageItem(image, fallbackId) {
+  if (!image) return null;
+
+  if (typeof image === "string") {
+    return {
+      id: fallbackId,
+      preview: image,
+      attachmentId: null,
+      filePath: null,
+      file: null,
+    };
+  }
+
+  return {
+    ...image,
+    id: image.id ?? image.attachmentId ?? fallbackId,
+    preview: image.preview ?? resolveAttachmentUrl(image.filePath),
+    attachmentId: image.attachmentId ?? null,
+    filePath: image.filePath ?? null,
+    file: image.file ?? null,
+  };
+}
+
+function buildUploadedImageItems(attachments, prefix) {
+  return (attachments ?? [])
+    .map((attachment, index) =>
+      normalizeImageItem(
+        {
+          ...attachment,
+          preview: resolveAttachmentUrl(attachment.filePath),
+        },
+        `${prefix}-${index}`
+      )
+    )
+    .filter(Boolean);
+}
+
+function extractEntryImages(entry) {
+  const attachments =
+    entry?.attachments ??
+    entry?.attachmentList ??
+    entry?.journalAttachments ??
+    entry?.images ??
+    [];
+
+  if (Array.isArray(attachments) && attachments.length > 0) {
+    return buildUploadedImageItems(attachments, `${getEntryId(entry)}-attachment`);
+  }
+
+  return (entry?.imagePreviews ?? [])
+    .map((image, index) => normalizeImageItem(image, `${getEntryId(entry)}-image-${index}`))
+    .filter(Boolean);
+}
+
+async function uploadImagesSafely(entryId, files) {
+  if (!files.length) return [];
+
+  try {
+    const uploadedAttachments = await uploadJournalAttachments(entryId, files);
+    return buildUploadedImageItems(uploadedAttachments, `${entryId}-uploaded`);
+  } catch (error) {
+    console.error("Failed to upload journal attachments:", error);
+    return [];
+  }
+}
+
 function hydrateEntry(entry, dayIndex) {
   if (!entry) return null;
 
@@ -79,7 +160,7 @@ function hydrateEntry(entry, dayIndex) {
     id: entryId,
     dayIndex,
     dateText: buildDateText(entry.recordDate),
-    imagePreviews: entry.imagePreviews ?? [],
+    imagePreviews: extractEntryImages(entry),
     createdTimeText: formatKoreanTime(entry.createdAt ?? entry.updatedAt),
   };
 }
@@ -106,7 +187,13 @@ export default function TripJournalScreen({
   const selectedRecordDate = selectedDayInfo?.isoDate ?? null;
   const reviewEntries = selectedRecordDate ? entriesByDay[selectedRecordDate] ?? [] : [];
   const isCompactDayTabs = tripDays.length > 4;
-  const selectedEntries = reviewEntries.filter((entry) => entry.dayIndex === selectedDay);
+  const selectedEntries = reviewEntries
+    .filter((entry) => entry.dayIndex === selectedDay)
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt ?? b.updatedAt ?? 0).getTime() -
+        new Date(a.createdAt ?? a.updatedAt ?? 0).getTime()
+    );
   const selectedEntry =
     selectedEntries.find((entry) => entry.id === selectedEntryId) ?? null;
 
@@ -186,6 +273,9 @@ export default function TripJournalScreen({
       ...files.map((file) => ({
         id: `${file.name}-${file.lastModified}-${Math.random()}`,
         preview: URL.createObjectURL(file),
+        file,
+        attachmentId: null,
+        filePath: null,
       })),
     ]);
   };
@@ -203,7 +293,10 @@ export default function TripJournalScreen({
 
     if (!tripId || !selectedRecordDate || !selectedDayInfo || isSubmitting) return;
 
-    const imagePreviews = reviewImages.map((image) => image.preview);
+    const existingImages = reviewImages.filter((image) => !image.file);
+    const newFiles = reviewImages
+      .map((image) => image.file)
+      .filter(Boolean);
     const payload = {
       recordDate: selectedRecordDate,
       memo: memo.trim().slice(0, 1000),
@@ -215,10 +308,11 @@ export default function TripJournalScreen({
       // 기존 메모 수정
       if (editingEntryId !== null) {
         const savedEntry = await updateJournalEntry(editingEntryId, payload);
+        const uploadedImages = await uploadImagesSafely(editingEntryId, newFiles);
         const nextEntry = {
           ...hydrateEntry(savedEntry, selectedDay),
           dateText: selectedDayInfo.fullDate,
-          imagePreviews,
+          imagePreviews: [...existingImages, ...uploadedImages],
           updatedAt: savedEntry.updatedAt ?? new Date().toISOString(),
         };
 
@@ -236,10 +330,12 @@ export default function TripJournalScreen({
 
       // 새 메모 생성
       const savedEntry = await createJournalEntry(tripId, payload);
+      const createdEntryId = getEntryId(savedEntry);
+      const uploadedImages = await uploadImagesSafely(createdEntryId, newFiles);
       const nextEntry = {
         ...hydrateEntry(savedEntry, selectedDay),
         dateText: selectedDayInfo.fullDate,
-        imagePreviews,
+        imagePreviews: [...existingImages, ...uploadedImages],
       };
 
       setEntriesByDay((prev) => ({
@@ -251,7 +347,7 @@ export default function TripJournalScreen({
         onUpdateTrip({
           ...trip,
           journalEntries: [nextEntry, ...(trip.journalEntries ?? [])],
-          coverImage: trip.coverImage || imagePreviews[0] || "",
+          coverImage: trip.coverImage || nextEntry.imagePreviews?.[0]?.preview || "",
         });
       }
 
@@ -265,21 +361,30 @@ export default function TripJournalScreen({
   };
 
   // 이미지 API는 아직 없어 현재 화면 상태에서만 이미지 목록을 갱신합니다.
-  const handleDeleteDetailImage = (imageIndex) => {
+  const handleDeleteDetailImage = async (imageIndex) => {
     if (!selectedEntry || !selectedRecordDate) return;
 
+    const targetImage = (selectedEntry.imagePreviews ?? [])[imageIndex];
     const nextImagePreviews = (selectedEntry.imagePreviews ?? []).filter(
       (_, index) => index !== imageIndex
     );
 
-    setEntriesByDay((prev) => ({
-      ...prev,
-      [selectedRecordDate]: (prev[selectedRecordDate] ?? []).map((entry) =>
-        entry.id === selectedEntry.id
-          ? { ...entry, imagePreviews: nextImagePreviews }
-          : entry
-      ),
-    }));
+    try {
+      if (targetImage?.attachmentId) {
+        await deleteJournalAttachment(targetImage.attachmentId);
+      }
+
+      setEntriesByDay((prev) => ({
+        ...prev,
+        [selectedRecordDate]: (prev[selectedRecordDate] ?? []).map((entry) =>
+          entry.id === selectedEntry.id
+            ? { ...entry, imagePreviews: nextImagePreviews }
+            : entry
+        ),
+      }));
+    } catch (error) {
+      console.error("Failed to delete journal attachment:", error);
+    }
   };
 
   // 상세 화면에서 수정 버튼을 누르면 선택한 메모를 편집 상태로 전환합니다.
@@ -288,12 +393,14 @@ export default function TripJournalScreen({
 
     setMemo(selectedEntry.memo ?? "");
     setReviewImages(
-      (selectedEntry.imagePreviews ?? []).map((imagePreview, index) => ({
-        id: `${selectedEntry.id}-${index}`,
-        preview: imagePreview,
-      }))
+      (selectedEntry.imagePreviews ?? [])
+        .map((imagePreview, index) =>
+          normalizeImageItem(imagePreview, `${selectedEntry.id}-${index}`)
+        )
+        .filter(Boolean)
     );
     setEditingEntryId(selectedEntry.id);
+    setSelectedEntryId(null);
     setIsWriting(true);
   };
 
@@ -420,7 +527,7 @@ export default function TripJournalScreen({
             <div className="journal-entry-detail-images">
               {selectedEntry.imagePreviews.map((imagePreview, index) => (
                 <div
-                  key={`${selectedEntry.id}-${index}`}
+                  key={imagePreview.id ?? `${selectedEntry.id}-${index}`}
                   className="journal-entry-detail-image-card"
                 >
                   <button
@@ -431,7 +538,7 @@ export default function TripJournalScreen({
                     삭제
                   </button>
                   <img
-                    src={imagePreview}
+                    src={imagePreview.preview}
                     alt={`기록 이미지 ${index + 1}`}
                     className="journal-entry-detail-image"
                   />
