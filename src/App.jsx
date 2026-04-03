@@ -70,7 +70,7 @@ function LoginScreen({ onNavigate, onLogin }) {
         try {
             console.log("로그인 시도");
             await login(email, password);
-            console.log("로그인 성공");
+            alert("로그인에 성공했습니다.");
             onNavigate("afterLogin");
         } catch (err) {
             console.log("로그인 실패");
@@ -137,33 +137,103 @@ function LoginScreen({ onNavigate, onLogin }) {
 }
 
 // ─── 화면 2: 회원가입 ────────────────────────────────────────────────────────
-function RegisterScreen({ onNavigate, onLogin }) {
-  const [fields, setFields] = useState({ name: "", email: "", pw: "", pw2: "" });
-  const placeholders = ["사용자 이름", "이메일 입력", "비밀번호 입력"];
-  const keys = ["name", "email", "pw"];
-  return (
-    <div className="screen register-screen">
-      <h1 className="register-title">회원가입</h1>
-      <div className="form-group">
-        {keys.map((key, index) => (
-          <input key={key} className="input-field" placeholder={placeholders[index]}
-            type={key === "pw" ? "password" : "text"} value={fields[key]}
-            onChange={(e) => setFields((prev) => ({ ...prev, [key]: e.target.value }))} />
-        ))}
-        <p className="find-link">8자 이상 입력하세요</p>
-        <input className="input-field" placeholder="비밀번호 재입력" type="password" value={fields.pw2}
-          onChange={(e) => setFields((prev) => ({ ...prev, pw2: e.target.value }))} />
-        <p className="find-link">비밀번호를 확인하세요</p>
-      </div>
-      <GreenButton fullWidth onClick={() => { onLogin(fields.name.trim() || "관리자"); onNavigate("afterLogin"); }}>
-        회원가입/로그인
-      </GreenButton>
-      <p className="sub-link">
-        계정이 있으신가요?{" "}
-        <span className="link" onClick={() => onNavigate("login")}>로그인하기</span>
-      </p>
-    </div>
-  );
+function RegisterScreen({ onNavigate }) {
+
+    const [form, setForm] = useState({
+        name: '',
+        email: '',
+        password: '',
+    });
+    const [loading, setLoading] = useState(false);
+
+    const { register } = useAuthStore();
+
+    const handleChange = (e) => {
+        setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            await register(form);
+            alert('회원가입 완료. 로그인해 주세요.');
+            onNavigate("Login");
+        } catch (err) {
+            alert(err.message || '회원가입에 실패했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="screen register-screen">
+
+            {/* 로고 */}
+            <div className="logo-wrapper">
+                <img src="/src/img/logo.png" alt="logo" className="logo" />
+            </div>
+
+            {/* 제목 */}
+            <div className="register-title">회원가입</div>
+
+            <form onSubmit={handleSubmit}>
+
+                <div className="form-group">
+                    <input
+                        type="text"
+                        name="name"
+                        value={form.name}
+                        onChange={handleChange}
+                        placeholder="이름"
+                        required
+                        className="input-field"
+                    />
+                </div>
+
+                <div className="form-group">
+                    <input
+                        type="email"
+                        name="email"
+                        value={form.email}
+                        onChange={handleChange}
+                        placeholder="이메일"
+                        required
+                        className="input-field"
+                    />
+                </div>
+
+                <div className="form-group">
+                    <input
+                        type="password"
+                        name="password"
+                        value={form.password}
+                        onChange={handleChange}
+                        placeholder="비밀번호"
+                        required
+                        className="input-field"
+                    />
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="green-btn full-width"
+                >
+                    {loading ? '처리 중...' : '회원가입'}
+                </button>
+
+            </form>
+
+            <div className="sub-link">
+                이미 계정이 있으신가요?{' '}
+                <span className="link" onClick={() => onNavigate("Login")}>
+                    로그인
+                </span>
+            </div>
+
+        </div>
+    );
 }
 
 // ─── 화면 3: 온보딩 ──────────────────────────────────────────────────────────
