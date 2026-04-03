@@ -170,12 +170,62 @@ export default function TripJournalScreen({
               ⌂
             </span>
             <span className="journal-title">여행을 먼저 선택해주세요</span>
-            <span className="hamburger">☰</span>
+            <span
+              className="hamburger"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowHeaderMenu((prev) => !prev);
+              }}
+            >
+              ☰
+            </span>
+
+            {showHeaderMenu && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: "absolute",
+                  top: 45,
+                  right: 0,
+                  background: "#fff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                  zIndex: 100,
+                  minWidth: "150px",
+                  overflow: "hidden"
+                }}
+              >
+                {/* ↩ 로그아웃 */}
+                <div
+                  style={{
+                    padding: "10px 16px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "13px",
+                    color: "#374151"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                  onClick={() => {
+                    if (window.confirm("로그아웃 하시겠습니까?")) {
+                      setShowHeaderMenu(false);
+                      logout();
+                      onNavigate("login");
+                    }
+                  }}
+                >
+                  ↩ 로그아웃
+                </div>
+              </div>
+            )}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    );
-  }
+        );
+      }
 
   const handleReviewImageChange = (e) => {
     const files = Array.from(e.target.files ?? []);
