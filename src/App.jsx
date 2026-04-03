@@ -1204,42 +1204,48 @@ export default function App() {
   const [userName, setUserName] = useState("관리자");
   const [editingTrip, setEditingTrip] = useState(null);
 
-  //로그인 후 db에서 여행 목록 불러오기
-const handleLogin = async (name) => {   // async 추가
-  setUserName(name || "관리자");
-  try {
-    const res = await getTrips();
-    const fetched = (res.data || []).map((t) => {
-      const countryObj = COUNTRIES.find((c) => c.name === t.country);
-      const flagUrl = countryObj
-        ? `https://flagcdn.com/w320/${countryObj.code}.png`
-        : "";
-      return {
-        id:            t.id,
-        name:          t.title,
-        country:       t.country,
-        startDate:     t.startDate,
-        endDate:       t.endDate,
-        flag:          flagUrl,
-        budget:        t.totalBudget
-                         ? `총 ${Number(t.totalBudget).toLocaleString()}원`
-                         : "예산 미설정",
-        totalBudget:   Number(t.totalBudget) || 0,
-        budgetData:    [],
-        dailyExpenses: {},
-        randomImage:   getRandomImage(),
-        coverImage:    "",
-        journalEntries: [],
-      };
-    });
-    setTrips(fetched);  // ✅ 오타 수정
-  } catch (err) {
-    console.error("여행 목록 불러오기 실패", err);
-  }
-};
+  // ✅ handleLogin — 이름만 설정, 여행 목록은 여기서 안 불러옴
+  const handleLogin = (name) => {
+    setUserName(name || "관리자");
+  };
 
-  const navigate = (destination) => {
-    if (destination === "afterLogin") { setScreen(trips.length === 0 ? "onboarding" : "home"); return; }
+  // ✅ navigate — afterLogin 시 여행 목록 불러오기
+  const navigate = async (destination) => {
+    if (destination === "afterLogin") {
+      // 로그인 직후 여행 목록 DB에서 불러오기
+      try {
+        const res = await getTrips();
+        const fetched = (res.data || []).map((t) => {
+          const countryObj = COUNTRIES.find((c) => c.name === t.country);
+          const flagUrl = countryObj
+            ? `https://flagcdn.com/w320/${countryObj.code}.png`
+            : "";
+          return {
+            id:             t.id,
+            name:           t.title,
+            country:        t.country,
+            startDate:      t.startDate,
+            endDate:        t.endDate,
+            flag:           flagUrl,
+            budget:         t.totalBudget
+                              ? `총 ${Number(t.totalBudget).toLocaleString()}원`
+                              : "예산 미설정",
+            totalBudget:    Number(t.totalBudget) || 0,
+            budgetData:     [],
+            dailyExpenses:  {},
+            randomImage:    getRandomImage(),
+            coverImage:     "",
+            journalEntries: [],
+          };
+        });
+        setTrips(fetched);
+        setScreen(fetched.length === 0 ? "onboarding" : "home");
+      } catch (err) {
+        console.error("여행 목록 불러오기를 실패했습니다", err);
+        setScreen("onboarding");
+      }
+      return;
+    }
     if (destination === "back") { setScreen(prevScreen); return; }
     if (destination === "createTrip") { setEditingTrip(null); }
     setPrevScreen(screen);
@@ -1279,35 +1285,33 @@ const handleLogin = async (name) => {   // async 추가
     console.error(err);
   }
 };
-  //여행 수정
+    //여행 수정
   const handleUpdateTrip = async (updatedTrip) => {
-  try {
-    // 지출 수정(dailyExpenses)은 백엔드 별도 API — 여기선 여행 기본정보만 수정
-    if (updatedTrip.name || updatedTrip.country) {
+    try {
+      // ✅ 조건 없이 항상 API 호출
       const requestData = {
         title:     updatedTrip.name,
         country:   updatedTrip.country,
         startDate: updatedTrip.startDate,
         endDate:   updatedTrip.endDate,
         budgets:   (updatedTrip.budgetData || [])
-                     .filter((item) => Number(item.amount) > 0)
-                     .map((item) => ({
-                       category: item.category,
-                       amount:   Number(item.amount),
-                     })),
+                    .filter((item) => Number(item.amount) > 0)
+                    .map((item) => ({
+                      category: item.category,
+                      amount:   Number(item.amount),
+                    })),
       };
       await updateTrip(updatedTrip.id, requestData);
-    }
 
-    setTrips((prev) =>
-      prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
-    );
-    if (screen !== "tripJournal") setEditingTrip(null);
-  } catch (err) {
-    alert("여행 수정에 실패했습니다.");
-    console.error(err);
-  }
-};
+      setTrips((prev) =>
+        prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
+      );
+      if (screen !== "tripJournal") setEditingTrip(null);
+    } catch (err) {
+      alert("여행 수정에 실패했습니다.");
+      console.error(err);
+    }
+  };
   //여행 삭제
   const handleDeleteTrip = async (tripId) => {
   try {
