@@ -477,6 +477,20 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
                     onClick={() => { setShowHeaderMenu(false); setDeleteTargetId(menuTargetId); }}>
                     🗑️ 여행 삭제하기
                   </div>
+                  <div style={{ height: "1px", background: "#e5e7eb" }} />
+                  <div style={{ padding: "10px 16px", cursor: "pointer", display: "flex",
+                    alignItems: "center", gap: "8px", fontSize: "13px", color: "#374151" }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    onClick={() => {
+                      if (window.confirm("로그아웃 하시겠습니까?")) {
+                        setShowHeaderMenu(false);
+                        logout();
+                        onNavigate("login");
+                      }
+                    }}>
+                    ↩ 로그아웃
+                  </div>
                 </>
               ) : (
                 <div style={{ padding: "12px 16px", fontSize: "13px", color: "#9ca3af" }}>
