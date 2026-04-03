@@ -1,13 +1,28 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import "../styles/dashboard.css";
 import { PieChart, Pie, Cell, Tooltip } from "recharts";
+import { getAdminDashboard } from "../api/adminApi";
 
 export default function AdminDashboard() {
 
-  const kpi = {
-    users: 1245,
-    trips: 320,
-    expenses: 8450000,
+  const [kpi, setKpi] = useState({
+    totalUsers: 0,
+    totalTrips: 0,
+    totalExpenseAmount: 0,
+  });
+
+  useEffect(() => {
+    fetchDashboard();
+  }, []);
+
+  const fetchDashboard = async () => {
+    try {
+      const res = await getAdminDashboard();
+
+      setKpi(res.data); // ⭐ ApiResponse.data
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const topDestinations = [
@@ -42,18 +57,18 @@ export default function AdminDashboard() {
       <div className="dashboard-kpi">
         <div className="kpi-card">
           <div className="kpi-title">총 사용자</div>
-          <div className="kpi-value">{kpi.users}</div>
+          <div className="kpi-value">{kpi.totalUsers}명</div>
         </div>
 
         <div className="kpi-card">
           <div className="kpi-title">총 여행</div>
-          <div className="kpi-value">{kpi.trips}</div>
+          <div className="kpi-value">{kpi.totalTrips}개</div>
         </div>
 
         <div className="kpi-card">
           <div className="kpi-title">총 지출</div>
           <div className="kpi-value">
-            {kpi.expenses.toLocaleString()}원
+            {Number(kpi.totalExpenseAmount).toLocaleString()}원
           </div>
         </div>
       </div>
