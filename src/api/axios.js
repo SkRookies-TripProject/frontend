@@ -4,7 +4,7 @@ const instance = axios.create({
   baseURL: "http://25.2.109.64:8080/api",
 });
 
-//  요청마다 토큰 자동 추가
+// 요청마다 토큰 자동 추가
 instance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("auth_token");
@@ -19,5 +19,3 @@ instance.interceptors.request.use(
 );
 
 export default instance;
-
-

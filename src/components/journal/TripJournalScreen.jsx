@@ -1,20 +1,43 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getStoredAccessToken } from "../../api/authStorage";
+import {
+  createJournalEntry,
+  deleteJournalEntry,
+  listJournalEntries,
+  updateJournalEntry,
+} from "../../api/journalEntries";
 
+// yyyy-mm-dd 형식 날짜 문자열을 Date 객체로 변환합니다.
+function parseLocalDate(dateString) {
+  if (!dateString) return null;
+
+  const [year, month, day] = dateString.split("-").map(Number);
+  if (!year || !month || !day) return null;
+
+  return new Date(year, month - 1, day);
+}
+
+// 여행 시작일~종료일 사이의 날짜 탭 데이터를 생성합니다.
 function buildTripDays(trip) {
-  
- 
   const labels = ["일", "월", "화", "수", "목", "금", "토"];
-  const start = new Date(trip.startDate);
-  const end = new Date(trip.endDate);
+  const start = parseLocalDate(trip?.startDate);
+  const end = parseLocalDate(trip?.endDate);
+
+  if (!start || !end) return [];
+
   const days = [];
   const current = new Date(start);
 
   while (current <= end && days.length < 14) {
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, "0");
+    const day = String(current.getDate()).padStart(2, "0");
+
     days.push({
       label: labels[current.getDay()],
       date: current.getDate(),
       fullDate: `${current.getMonth() + 1}월${current.getDate()}일`,
-      isoDate: current.toISOString().slice(0, 10),
+      isoDate: `${year}-${month}-${day}`,
     });
     current.setDate(current.getDate() + 1);
   }
@@ -22,6 +45,7 @@ function buildTripDays(trip) {
   return days;
 }
 
+// createdAt / updatedAt 값을 화면용 시간 텍스트로 바꿉니다.
 function formatKoreanTime(dateLike) {
   if (!dateLike) return "";
 
@@ -33,13 +57,39 @@ function formatKoreanTime(dateLike) {
   }).format(new Date(dateLike));
 }
 
+// 백엔드 응답에서 id / entryId를 공통으로 처리하기 위한 헬퍼입니다.
+function getEntryId(entry) {
+  return entry?.entryId ?? entry?.id ?? null;
+}
+
+function buildDateText(recordDate) {
+  const parsed = parseLocalDate(recordDate);
+  if (!parsed) return recordDate ?? "";
+
+  return `${parsed.getMonth() + 1}월${parsed.getDate()}일`;
+}
+
+function hydrateEntry(entry, dayIndex) {
+  if (!entry) return null;
+
+  const entryId = getEntryId(entry);
+
+  return {
+    ...entry,
+    id: entryId,
+    dayIndex,
+    dateText: buildDateText(entry.recordDate),
+    imagePreviews: entry.imagePreviews ?? [],
+    createdTimeText: formatKoreanTime(entry.createdAt ?? entry.updatedAt),
+  };
+}
+
 export default function TripJournalScreen({
   onNavigate,
   trip,
   onUpdateTrip,
   renderButton,
 }) {
-  // 후기 작성/상세/목록 흐름에서 사용하는 로컬 화면 상태
   const [selectedDay, setSelectedDay] = useState(0);
   const [isWriting, setIsWriting] = useState(false);
   const [reviewImages, setReviewImages] = useState([]);
@@ -47,6 +97,69 @@ export default function TripJournalScreen({
   const [selectedEntryId, setSelectedEntryId] = useState(null);
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [deleteEntryId, setDeleteEntryId] = useState(null);
+  const [entriesByDay, setEntriesByDay] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const tripDays = buildTripDays(trip);
+  const selectedDayInfo = tripDays[selectedDay] ?? tripDays[0];
+  const tripId = trip?.tripId ?? trip?.id ?? null;
+  const selectedRecordDate = selectedDayInfo?.isoDate ?? null;
+  const reviewEntries = selectedRecordDate ? entriesByDay[selectedRecordDate] ?? [] : [];
+  const isCompactDayTabs = tripDays.length > 4;
+  const selectedEntries = reviewEntries.filter((entry) => entry.dayIndex === selectedDay);
+  const selectedEntry =
+    selectedEntries.find((entry) => entry.id === selectedEntryId) ?? null;
+
+  // 작성/수정 화면을 닫을 때 입력 상태를 초기화합니다.
+  const resetEditor = () => {
+    setMemo("");
+    setReviewImages([]);
+    setIsWriting(false);
+    setEditingEntryId(null);
+  };
+
+  // 여행이 바뀌면 현재 선택 상태와 날짜별 메모 캐시를 함께 초기화합니다.
+  useEffect(() => {
+    setSelectedDay(0);
+    setSelectedEntryId(null);
+    setDeleteEntryId(null);
+    resetEditor();
+    setEntriesByDay({});
+  }, [tripId]);
+
+  // 선택한 여행/날짜의 메모 목록을 서버에서 조회합니다.
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadEntries() {
+      if (!tripId || !selectedRecordDate || !getStoredAccessToken()) {
+        return;
+      }
+
+      try {
+        const loadedEntries = await listJournalEntries(tripId, selectedRecordDate);
+        if (!isMounted) return;
+
+        const hydratedEntries = loadedEntries
+          .map((entry) => hydrateEntry(entry, selectedDay))
+          .filter(Boolean);
+
+        setEntriesByDay((prev) => ({
+          ...prev,
+          [selectedRecordDate]: hydratedEntries,
+        }));
+      } catch (error) {
+        if (!isMounted) return;
+        console.error("Failed to load journal entries:", error);
+      }
+    }
+
+    loadEntries();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [tripId, selectedRecordDate, selectedDay]);
 
   if (!trip) {
     return (
@@ -64,22 +177,6 @@ export default function TripJournalScreen({
     );
   }
 
-  const tripDays = buildTripDays(trip);
-  const reviewEntries = trip.journalEntries ?? [];
-  const selectedDayInfo = tripDays[selectedDay] ?? tripDays[0];
-  const isCompactDayTabs = tripDays.length > 4;
-  // 선택한 날짜의 기록만 따로 보여주기 위한 필터링
-  const selectedEntries = reviewEntries.filter((entry) => entry.dayIndex === selectedDay);
-  const selectedEntry =
-    selectedEntries.find((entry) => entry.id === selectedEntryId) ?? null;
-
-  const resetEditor = () => {
-    setMemo("");
-    setReviewImages([]);
-    setIsWriting(false);
-    setEditingEntryId(null);
-  };
-
   const handleReviewImageChange = (e) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -93,7 +190,10 @@ export default function TripJournalScreen({
     ]);
   };
 
-  const handleSaveReview = () => {
+  // 기록하기 버튼 클릭 시
+  // 1) 작성 모드 진입 또는
+  // 2) 생성/수정 API 호출을 수행합니다.
+  const handleSaveReview = async () => {
     if (!isWriting) {
       setSelectedEntryId(null);
       setEditingEntryId(null);
@@ -101,81 +201,88 @@ export default function TripJournalScreen({
       return;
     }
 
+    if (!tripId || !selectedRecordDate || !selectedDayInfo || isSubmitting) return;
+
     const imagePreviews = reviewImages.map((image) => image.preview);
-
-    if (editingEntryId !== null) {
-      const targetEntry = reviewEntries.find((entry) => entry.id === editingEntryId);
-      if (!targetEntry) return;
-
-      const nextEntries = reviewEntries.map((entry) =>
-        entry.id === editingEntryId
-          ? {
-              ...entry,
-              dayIndex: selectedDay,
-              dateText: selectedDayInfo?.fullDate ?? entry.dateText ?? "",
-              memo: memo.trim(),
-              imagePreviews,
-              updatedAt: new Date().toISOString(),
-            }
-          : entry
-      );
-
-      onUpdateTrip?.({
-        ...trip,
-        journalEntries: nextEntries,
-        coverImage: trip.coverImage || imagePreviews[0] || "",
-      });
-
-      resetEditor();
-      setSelectedEntryId(editingEntryId);
-      return;
-    }
-
-    // 사용자가 작성한 메모와 이미지를 날짜별 후기 기록으로 저장
-    const createdAt = new Date().toISOString();
-    const nextEntry = {
-      id: Date.now(),
-      dayIndex: selectedDay,
-      dateText: selectedDayInfo?.fullDate ?? "",
-      memo: memo.trim(),
-      imagePreviews,
-      createdAt,
-      createdTimeText: formatKoreanTime(createdAt),
+    const payload = {
+      recordDate: selectedRecordDate,
+      memo: memo.trim().slice(0, 1000),
     };
 
-    onUpdateTrip?.({
-      ...trip,
-      journalEntries: [nextEntry, ...reviewEntries],
-      // 첫 후기 이미지가 메인 여행 카드 대표 이미지로 보이도록 연결
-      coverImage: trip.coverImage || imagePreviews[0] || "",
-    });
+    try {
+      setIsSubmitting(true);
 
-    resetEditor();
-    setSelectedEntryId(null);
+      // 기존 메모 수정
+      if (editingEntryId !== null) {
+        const savedEntry = await updateJournalEntry(editingEntryId, payload);
+        const nextEntry = {
+          ...hydrateEntry(savedEntry, selectedDay),
+          dateText: selectedDayInfo.fullDate,
+          imagePreviews,
+          updatedAt: savedEntry.updatedAt ?? new Date().toISOString(),
+        };
+
+        setEntriesByDay((prev) => ({
+          ...prev,
+          [selectedRecordDate]: (prev[selectedRecordDate] ?? []).map((entry) =>
+            entry.id === editingEntryId ? nextEntry : entry
+          ),
+        }));
+
+        resetEditor();
+        setSelectedEntryId(editingEntryId);
+        return;
+      }
+
+      // 새 메모 생성
+      const savedEntry = await createJournalEntry(tripId, payload);
+      const nextEntry = {
+        ...hydrateEntry(savedEntry, selectedDay),
+        dateText: selectedDayInfo.fullDate,
+        imagePreviews,
+      };
+
+      setEntriesByDay((prev) => ({
+        ...prev,
+        [selectedRecordDate]: [nextEntry, ...(prev[selectedRecordDate] ?? [])],
+      }));
+
+      if (onUpdateTrip) {
+        onUpdateTrip({
+          ...trip,
+          journalEntries: [nextEntry, ...(trip.journalEntries ?? [])],
+          coverImage: trip.coverImage || imagePreviews[0] || "",
+        });
+      }
+
+      resetEditor();
+      setSelectedEntryId(null);
+    } catch (error) {
+      console.error("Failed to save journal entry:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  // 이미지 API는 아직 없어 현재 화면 상태에서만 이미지 목록을 갱신합니다.
   const handleDeleteDetailImage = (imageIndex) => {
-    if (!selectedEntry) return;
+    if (!selectedEntry || !selectedRecordDate) return;
 
     const nextImagePreviews = (selectedEntry.imagePreviews ?? []).filter(
       (_, index) => index !== imageIndex
     );
-    const nextEntries = reviewEntries.map((entry) =>
-      entry.id === selectedEntry.id
-        ? { ...entry, imagePreviews: nextImagePreviews }
-        : entry
-    );
 
-    onUpdateTrip?.({
-      ...trip,
-      journalEntries: nextEntries,
-      coverImage:
-        trip.coverImage === selectedEntry.imagePreviews?.[imageIndex]
-          ? nextImagePreviews[0] || ""
-          : trip.coverImage,
-    });
+    setEntriesByDay((prev) => ({
+      ...prev,
+      [selectedRecordDate]: (prev[selectedRecordDate] ?? []).map((entry) =>
+        entry.id === selectedEntry.id
+          ? { ...entry, imagePreviews: nextImagePreviews }
+          : entry
+      ),
+    }));
   };
 
+  // 상세 화면에서 수정 버튼을 누르면 선택한 메모를 편집 상태로 전환합니다.
   const handleStartEditEntry = () => {
     if (!selectedEntry) return;
 
@@ -190,37 +297,42 @@ export default function TripJournalScreen({
     setIsWriting(true);
   };
 
+  // 삭제 확인 모달을 띄우기 위해 대상 메모 id를 저장합니다.
   const handleRequestDeleteEntry = (entryId) => {
     setDeleteEntryId(entryId);
   };
 
-  const handleConfirmDeleteEntry = () => {
-    const targetEntry = reviewEntries.find((entry) => entry.id === deleteEntryId);
-    if (!targetEntry) {
+  // 삭제 확인 시 서버 삭제 API를 호출하고 현재 날짜 목록에서 제거합니다.
+  const handleConfirmDeleteEntry = async () => {
+    if (!selectedRecordDate || deleteEntryId === null) {
       setDeleteEntryId(null);
       return;
     }
 
-    const nextEntries = reviewEntries.filter((entry) => entry.id !== deleteEntryId);
-    const nextCoverImage = targetEntry.imagePreviews?.includes(trip.coverImage)
-      ? nextEntries.find((entry) => entry.imagePreviews?.length)?.imagePreviews?.[0] || ""
-      : trip.coverImage;
+    try {
+      setIsSubmitting(true);
+      await deleteJournalEntry(deleteEntryId);
 
-    onUpdateTrip?.({
-      ...trip,
-      journalEntries: nextEntries,
-      coverImage: nextCoverImage,
-    });
+      setEntriesByDay((prev) => ({
+        ...prev,
+        [selectedRecordDate]: (prev[selectedRecordDate] ?? []).filter(
+          (entry) => entry.id !== deleteEntryId
+        ),
+      }));
 
-    if (selectedEntryId === deleteEntryId) {
-      setSelectedEntryId(null);
+      if (selectedEntryId === deleteEntryId) {
+        setSelectedEntryId(null);
+      }
+
+      if (editingEntryId === deleteEntryId) {
+        resetEditor();
+      }
+    } catch (error) {
+      console.error("Failed to delete journal entry:", error);
+    } finally {
+      setDeleteEntryId(null);
+      setIsSubmitting(false);
     }
-
-    if (editingEntryId === deleteEntryId) {
-      resetEditor();
-    }
-
-    setDeleteEntryId(null);
   };
 
   return (
@@ -297,7 +409,6 @@ export default function TripJournalScreen({
           </div>
         </div>
       ) : selectedEntry ? (
-        // 기록 목록에서 선택한 메모의 상세 보기 화면
         <div className="journal-entry-detail">
           <div className="journal-entry-detail-date-row">
             <div className="journal-entry-detail-date">{selectedEntry.dateText}</div>
@@ -354,7 +465,6 @@ export default function TripJournalScreen({
           </div>
         </div>
       ) : selectedEntries.length > 0 ? (
-        // 날짜별로 저장된 후기 목록 화면
         <div className="journal-entry-list">
           {selectedEntries.map((entry) => (
             <button
