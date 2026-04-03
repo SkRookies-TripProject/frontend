@@ -450,6 +450,8 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
       <div className="home-header">
         <span className="filter-icon"
           onClick={(e) => { e.stopPropagation(); onNavigate("tripFilter"); }}>⌂</span>
+        <span className="filter-serach-icon"
+          onClick={(e) => { e.stopPropagation(); onNavigate("tripFilter"); }}>✈</span>
         <div style={{ position: "relative" }}>
           <span className="hamburger"
             onClick={(e) => { e.stopPropagation(); setShowHeaderMenu((prev) => !prev); }}>☰</span>
