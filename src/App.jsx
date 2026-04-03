@@ -6,7 +6,7 @@ import StatsScreen from "./pages/StatsScreen";
 import TripJournalScreen from "./components/journal/TripJournalScreen";
 import { useAuthStore } from "./store/authStore";
 import { useNavigate, Link } from "react-router-dom";
-import { getTrips, createTrip, updateTrip, deleteTrip } from "./api/tripApi";
+import { getTrips, createTrip, updateTrip, deleteTrip, getTripBudgets } from "./api/tripApi";
 
 countries.registerLocale(ko);
 
@@ -460,6 +460,7 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [menuTargetId, setMenuTargetId] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const { logout } = useAuthStore();
 
   const handleDeleteConfirm = () => {
     onDeleteTrip(deleteTargetId);
@@ -472,9 +473,9 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
       onClick={() => { setShowHeaderMenu(false); setMenuTargetId(null); }}>
       <div className="home-header">
         <span className="filter-icon"
-          onClick={(e) => { e.stopPropagation(); onNavigate("tripFilter"); }}>⌂</span>
+          onClick={(e) => { onNavigate("home"); }}>⌂</span>
         <span className="filter-serach-icon"
-          onClick={(e) => { e.stopPropagation(); onNavigate("tripFilter"); }}>✈</span>
+          onClick={(e) => { onNavigate("home"); }}>✈</span>
         <div style={{ position: "relative" }}>
           <span className="hamburger"
             onClick={(e) => { e.stopPropagation(); setShowHeaderMenu((prev) => !prev); }}>☰</span>
@@ -500,11 +501,40 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
                     onClick={() => { setShowHeaderMenu(false); setDeleteTargetId(menuTargetId); }}>
                     🗑️ 여행 삭제하기
                   </div>
+                  <div style={{ height: "1px", background: "#e5e7eb" }} />
+                  <div style={{ padding: "10px 16px", cursor: "pointer", display: "flex",
+                    alignItems: "center", gap: "8px", fontSize: "13px", color: "#374151" }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    onClick={() => {
+                      if (window.confirm("로그아웃 하시겠습니까?")) {
+                        setShowHeaderMenu(false);
+                        logout();
+                        onNavigate("login");
+                      }
+                    }}>
+                    ↩ 로그아웃
+                  </div>
                 </>
               ) : (
                 <div style={{ padding: "12px 16px", fontSize: "13px", color: "#9ca3af" }}>
                   여행을 먼저 선택해주세요
+                  <div style={{ height: "1px", background: "#e5e7eb" }} />
+                  <div style={{ padding: "10px 16px", cursor: "pointer", display: "flex",
+                    alignItems: "center", gap: "8px", fontSize: "13px", color: "#374151" }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    onClick={() => {
+                      if (window.confirm("로그아웃 하시겠습니까?")) {
+                        setShowHeaderMenu(false);
+                        logout();
+                        onNavigate("login");
+                      }
+                    }}>
+                    ↩ 로그아웃
+                  </div>
                 </div>
+                
               )}
             </div>
           )}
@@ -1310,23 +1340,25 @@ export default function App() {
     console.error(err);
   }
 };
-    //여행 수정
+   //여행 수정
   const handleUpdateTrip = async (updatedTrip) => {
     try {
-      // ✅ 조건 없이 항상 API 호출
+      const budgets = (updatedTrip.budgetData || [])
+        .filter((item) => String(item.amount).trim() !== "" && Number(item.amount) > 0)
+        .map((item) => ({
+          category: item.category,
+          amount: Number(item.amount),
+        }));
+
       if (screen !== "tripJournal") {
         const requestData = {
-          title:     updatedTrip.name,
-          country:   updatedTrip.country,
+          title: updatedTrip.name,
+          country: updatedTrip.country,
           startDate: updatedTrip.startDate,
-          endDate:   updatedTrip.endDate,
-          budgets:   (updatedTrip.budgetData || [])
-                      .filter((item) => Number(item.amount) > 0)
-                      .map((item) => ({
-                        category: item.category,
-                        amount:   Number(item.amount),
-                      })),
+          endDate: updatedTrip.endDate,
+          budgets,
         };
+
         await updateTrip(updatedTrip.id, requestData);
       }
 
@@ -1351,12 +1383,33 @@ export default function App() {
   }
 };
 
-  const handleEditTrip = (tripId) => {
+  const handleEditTrip = async (tripId) => {
     const target = trips.find((t) => t.id === tripId);
-    setEditingTrip(target);
+    try {
+      // ✅ DB에서 해당 여행의 카테고리별 예산 불러오기
+      const res = await getTripBudgets(tripId);
+      const budgetData = (res.data || []).map((b) => ({
+        category:       b.category,
+        amount:         String(b.amount),  // input에 표시하려면 string으로
+        customCategory: "",
+      }));
+
+      setEditingTrip({
+        ...target,
+        budgetData: budgetData.length > 0
+          ? budgetData
+          : [{ category: "식비", amount: "", customCategory: "" }],
+      });
+    } catch (err) {
+      console.error("예산 목록 불러오기 실패", err);
+      // 실패해도 수정 화면은 열어줌 — 빈 폼으로 시작
+      setEditingTrip({
+        ...target,
+        budgetData: [{ category: "식비", amount: "", customCategory: "" }],
+      });
+    }
     setScreen("createTrip");
   };
-
   const selectedTrip = trips.find((trip) => trip.id === selectedTripId) || null;
 
   const renderScreen = () => {

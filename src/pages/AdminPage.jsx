@@ -1,4 +1,4 @@
-import React, {useEffect} from "react";
+import React, { useEffect, useState } from "react";
 import AdminTable from "../components/AdminTable";
 import AdminDashboard from "../components/AdminDashboard";
 import "../styles/admin.css";
@@ -8,8 +8,11 @@ import { useAuthStore } from "../store/authStore";
 export default function AdminPage({ onNavigate }) {
 
   const { role } = useAuthStore();
+  const [keyword, setKeyword] = useState("");
 
   useEffect(() => {
+    if (role === null) return;
+
     if (role !== "ADMIN") {
       alert("관리자만 접근 가능합니다");
       onNavigate("login"); 
@@ -19,7 +22,7 @@ export default function AdminPage({ onNavigate }) {
   return (
     <div className="admin-page">
 
-      {/* 🔥 상단바 */}
+      {/*  상단바 */}
       <div className="admin-header">
         <img src={logo} alt="logo" className="admin-logo" />
 
@@ -34,16 +37,18 @@ export default function AdminPage({ onNavigate }) {
         </button>
       </div>
 
-      {/* 🔍 검색창 */}
+      {/*  검색창 */}
       <div className="admin-search">
         <input
           type="text"
           placeholder="이름 또는 이메일을 입력해주세요"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
         />
         <button>검색하기</button>
       </div>
 
-      <AdminTable />
+      <AdminTable keyword={keyword} />
       <div className="admin-divider"></div>
       <AdminDashboard />
 
