@@ -38,5 +38,5 @@ export const getTripBudgets = async (tripId) => {
 
 // 실제 지출 내역 생성
 export const createExpense = (tripId, data) => {
-  return axios.post(`/api/trips/${tripId}/expenses`, data);
+  return axios.post(`/trips/${tripId}/expenses`, data);
 };
