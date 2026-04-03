@@ -597,8 +597,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip }) {
   const handleDateSelect = (isoDate) => {
     setSelectedDate(isoDate);
     setActiveCategory("ALL");
-    const existing = (trip?.dailyExpenses || {})[isoDate];
-    setIsDailyInputMode(!existing || existing.length === 0);
+    setIsDailyInputMode(false);
     setDailyInputItems([{ category: "식비", amount: "", memo: "" }]);
   };
 
