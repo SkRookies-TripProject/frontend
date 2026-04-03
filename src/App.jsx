@@ -665,6 +665,15 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip }) {
       { category: getDefaultCategory(), amount: "", memo: "" }
     ]);
 
+  const categoryMap = {
+    "식비": "FOOD",
+    "교통": "TRANSPORT",
+    "숙박": "LODGING",
+    "기타": "OTHER",
+    "관광": "SIGHTSEEING",
+    "쇼핑": "SHOPPING"
+  };  
+
   const handleDailyItemChange = (index, field, value) =>
     setDailyInputItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
 
@@ -680,16 +689,17 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip }) {
     }
 
     try {
-      // ✅ 1. DB 저장 요청
       await Promise.all(
-        validItems.map((item) =>
-          createExpense(trip.id, {
-            category: item.category,
+        validItems.map((item) => {
+          const payload = {
+            category: categoryMap[item.category] || "OTHER",
             amount: Number(item.amount),
-            date: selectedDate,
+            expenseDate: selectedDate,
             memo: item.memo || "",
-          })
-        )
+          };
+          console.log("Payload to send:", payload); // ✅ 여기서 찍어야 함
+          return createExpense(trip.id, payload);
+        })
       );
 
       // ✅ 2. 성공하면 기존 로직 유지 (UI 반영)
@@ -712,6 +722,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip }) {
           [selectedDate]: [...existing, ...newItems],
         },
       });
+
 
       setIsDailyInputMode(false);
       setDailyInputItems([{ category: "식비", amount: "", memo: "" }]);
@@ -1304,24 +1315,37 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip }) {
               <span style={{ fontSize: 12, color: "#10b981", cursor: "pointer" }} onClick={addDailyItem}>+ 항목 추가</span>
             </div>
             {dailyInputItems.map((item, index) => (
-              <div key={index} className="daily-input-row">
-                <select className="input-field daily-select" value={item.category}
-                  onChange={(e) => handleDailyItemChange(index, "category", e.target.value)}>
-                  {["식비", "교통", "숙박", "관광", "쇼핑", "기타"].map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-                <div className="daily-amount-wrap">
-                  <input className="input-field daily-amount-input" type="number" placeholder="금액"
-                    value={item.amount} onChange={(e) => handleDailyItemChange(index, "amount", e.target.value)} />
-                  <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 4 }}>원</span>
+              <div key={index} style={{ marginBottom: 8 }}>
+                {/* 첫 줄: flex로 묶기 */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <select className="input-field daily-select" value={item.category}
+                    onChange={(e) => handleDailyItemChange(index, "category", e.target.value)}>
+                    {["식비", "교통", "숙박", "관광", "쇼핑", "기타"].map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+
+                  <div className="daily-amount-wrap" style={{ flex: 1 }}>
+                    <input className="input-field daily-amount-input" type="number" placeholder="금액"
+                      value={item.amount} onChange={(e) => handleDailyItemChange(index, "amount", e.target.value)} />
+                    <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 4 }}>원</span>
+                  </div>
+
+                  {dailyInputItems.length > 1 && (
+                    <button onClick={() => removeDailyItem(index)}
+                      style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 16, padding: "0 4px" }}>✕</button>
+                  )}
                 </div>
-                {dailyInputItems.length > 1 && (
-                  <button onClick={() => removeDailyItem(index)}
-                    style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 16, padding: "0 4px" }}>✕</button>
-                )}
+
+                {/* 둘째 줄: 메모 */}
+                <input className="input-field daily-memo-input" type="text" placeholder="메모"
+                  value={item.memo} onChange={(e) => handleDailyItemChange(index, "memo", e.target.value)}
+                  style={{ width: "100%", marginTop: 4 }} 
+                />
               </div>
             ))}
+
+            {/* 버튼 줄 */}
             <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
               <button className="daily-cancel-btn" onClick={() => setIsDailyInputMode(false)}>취소</button>
               <button className="daily-save-btn" onClick={saveDailyExpenses}>저장</button>
@@ -1353,7 +1377,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip }) {
                   <div key={expense.id} className="expense-item">
                     <div>
                       <div className="expense-label">{expense.label}</div>
-                      <div className="expense-sub">{expense.category}</div>
+                      <div className="expense-sub">{expense.memo}</div>
                     </div>
                     <div className={`expense-amount ${expense.amount < 0 ? "red-text" : "green-text"}`}>
                       {expense.amount < 0 ? "-" : "+"}{Math.abs(expense.amount).toLocaleString()}

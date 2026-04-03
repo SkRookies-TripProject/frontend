@@ -36,7 +36,29 @@ export const getTripBudgets = async (tripId) => {
   return response.data;
 };
 
+// 여행별 예산 목록 수정
+
+
 // 실제 지출 내역 생성
-export const createExpense = (tripId, data) => {
-  return axios.post(`/trips/${tripId}/expenses`, data);
+export const createExpense = async (tripId, expenseData) => {
+  const response = await instance.post(`/trips/${tripId}/expenses`, expenseData);
+  return response.data;
 };
+
+// 실제 지출 내역 조회
+export const getExpenses = async (tripId, params = {}) => {
+  const response = await instance.get(`/trips/${tripId}/expenses`, { params });
+  return response.data;
+};
+
+// 실제 지출 내역 수정
+//export const updateExpense = async (expenseId, expenseId) => {
+//  const response = await instance.put(`/expenses/${expenseId}`, expenseId);
+//  return response.data;
+//};
+
+// 실제 지출 내역 삭제
+//export const deleteExpense = async (expenseId) => {
+//  const response = await instance.delete(`/expenses/${expenseId}`);
+//  return response.data;
+//};
