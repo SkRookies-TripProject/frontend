@@ -688,7 +688,13 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
     "숙박": "LODGING",
     "기타": "OTHER",
     "관광": "SIGHTSEEING",
-    "쇼핑": "SHOPPING"
+    "쇼핑": "SHOPPING",
+    "FOOD": "식비",
+    "TRANSPORT": "교통",
+    "LODGING": "숙박",
+    "OTHER": "기타",
+    "SIGHTSEEING": "관광",
+    "SHOPPING": "쇼핑"
   };  
 
   const handleDailyItemChange = (index, field, value) =>
@@ -1386,7 +1392,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
                 {expenses.map((expense) => (
                   <div key={expense.id} className="expense-item">
                     <div>
-                      <div className="expense-label">{expense.category}</div>
+                      <div className="expense-label">{categoryMap[expense.category] || expense.category}</div>
                       <div className="expense-sub">{expense.memo}</div>
                     </div>
                     <div className={`expense-amount ${-expense.amount < 0 ? "red-text" : "green-text"}`}>
