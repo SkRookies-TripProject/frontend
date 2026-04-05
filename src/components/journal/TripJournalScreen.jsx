@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getStoredAccessToken } from "../../api/authStorage";
+import { useAuthStore } from "../../store/authStore";
 import {
   createJournalEntry,
   deleteJournalAttachment,
@@ -171,6 +172,7 @@ export default function TripJournalScreen({
   onUpdateTrip,
   renderButton,
 }) {
+  const { logout } = useAuthStore();
   const [selectedDay, setSelectedDay] = useState(0);
   const [isWriting, setIsWriting] = useState(false);
   const [reviewImages, setReviewImages] = useState([]);
@@ -180,6 +182,7 @@ export default function TripJournalScreen({
   const [deleteEntryId, setDeleteEntryId] = useState(null);
   const [entriesByDay, setEntriesByDay] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
 
   const tripDays = buildTripDays(trip);
   const selectedDayInfo = tripDays[selectedDay] ?? tripDays[0];
@@ -500,7 +503,55 @@ export default function TripJournalScreen({
             ⌂
           </span>
           <span className="journal-title">{trip.name}(후기)</span>
-          <span className="hamburger">☰</span>
+          <span
+            className="hamburger"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowHeaderMenu((prev) => !prev);
+            }}
+          >
+            ☰
+          </span>
+          {showHeaderMenu && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute",
+                top: 45,
+                right: 0,
+                background: "#fff",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                zIndex: 100,
+                minWidth: "150px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  padding: "10px 16px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "13px",
+                  color: "#374151",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                onClick={() => {
+                  if (window.confirm("로그아웃 하시겠습니까?")) {
+                    setShowHeaderMenu(false);
+                    logout();
+                    onNavigate("login");
+                  }
+                }}
+              >
+                ↩ 로그아웃
+              </div>
+            </div>
+          )}
         </div>
         <div className={`journal-days${isCompactDayTabs ? " compact" : ""}`}>
           {tripDays.map((day, index) => (
