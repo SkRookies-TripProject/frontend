@@ -1440,6 +1440,9 @@ export default function App() {
   // ✅ navigate — afterLogin 시 여행 목록 불러오기
   const navigate = async (destination, data) => {
     if (destination === "afterLogin") {
+      if (data && data.name) {
+      handleLogin(data.name); 
+    }
       // 로그인 직후 여행 목록 DB에서 불러오기
       try {
         const res = await getTrips();
@@ -1519,6 +1522,7 @@ export default function App() {
 };
    //여행 수정
   const handleUpdateTrip = async (updatedTrip) => {
+    console.log("budgetData:", updatedTrip.budgetData);
     try {
       const budgets = (updatedTrip.budgetData || [])
         .filter((item) => String(item.amount).trim() !== "" && Number(item.amount) > 0)
