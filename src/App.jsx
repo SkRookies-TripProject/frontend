@@ -6,7 +6,7 @@ import StatsScreen from "./pages/StatsScreen";
 import TripJournalScreen from "./components/journal/TripJournalScreen";
 import { useAuthStore } from "./store/authStore";
 import { useNavigate, Link } from "react-router-dom";
-import { getTrips, createTrip, updateTrip, deleteTrip, getTripBudgets, createExpense } from "./api/tripApi";
+import { getTrips, createTrip, updateTrip, deleteTrip, getTripBudgets, createExpense, getExpenses } from "./api/tripApi";
 
 countries.registerLocale(ko);
 
@@ -621,7 +621,7 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
 const CATEGORIES = ["ALL", "식비", "교통", "숙박", "관광", "쇼핑", "기타"];
 
 // ─── 화면 6: 여행 상세 ───────────────────────────────────────────────────────
-function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip }) {
+function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId  }) {
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [isEditMode, setIsEditMode] = useState(false);
   const [editName, setEditName] = useState("");
@@ -646,11 +646,26 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip }) {
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
 
   const [selectedTrip, setSelectedTrip] = useState(null);
+  const [expenses, setExpenses] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const budgetLabel = trip.budget?.replace("사용 예산: ", "") ?? trip.budget ?? "-";
+  const dateTabs = buildTripDays(trip);
+  const dailyExpenses = selectedDate ? (trip?.dailyExpenses || {})[selectedDate] || [] : [];
+  const allExpenses = Object.values(trip?.dailyExpenses || {}).flat();
+  const baseExpenses = selectedDate ? dailyExpenses : allExpenses;
 
   useEffect(() => {
-    setSelectedDate(trip?.startDate ?? null);
-    setIsDailyInputMode(false);
-  }, [trip?.id, trip?.startDate]);
+    const fetchExpenses = async () => {
+      try {
+        const res = await getExpenses(tripId);
+        setExpenses(res.data); // state에 저장
+      } catch (error) {
+        console.error("지출 내역 조회 실패", error);
+      }
+    };
+
+    if (tripId) fetchExpenses();
+  }, [tripId]);
 
   const handleDateSelect = (isoDate) => {
     setSelectedDate(isoDate);
@@ -658,6 +673,8 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip }) {
     setIsDailyInputMode(false);
     setDailyInputItems([{ category: "식비", amount: "", memo: "" }]);
   };
+
+  
 
   const addDailyItem = () =>
     setDailyInputItems((prev) => [
@@ -671,7 +688,13 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip }) {
     "숙박": "LODGING",
     "기타": "OTHER",
     "관광": "SIGHTSEEING",
-    "쇼핑": "SHOPPING"
+    "쇼핑": "SHOPPING",
+    "FOOD": "식비",
+    "TRANSPORT": "교통",
+    "LODGING": "숙박",
+    "OTHER": "기타",
+    "SIGHTSEEING": "관광",
+    "SHOPPING": "쇼핑"
   };  
 
   const handleDailyItemChange = (index, field, value) =>
@@ -746,23 +769,16 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip }) {
       </div>
     );
   }
+  const selected = new Date(selectedDate); // 문자열 -> Date
 
-  const budgetLabel = trip.budget?.replace("사용 예산: ", "") ?? trip.budget ?? "-";
-  const dateTabs = buildTripDays(trip);
-  const dailyExpenses = selectedDate ? (trip?.dailyExpenses || {})[selectedDate] || [] : [];
-  const allExpenses = Object.values(trip?.dailyExpenses || {}).flat();
-  const baseExpenses = selectedDate ? dailyExpenses : allExpenses;
-
-  const filteredExpenses = [...baseExpenses]
-    .filter((e) => activeCategory === "ALL" || e.category === activeCategory)
-    .filter((e) => amountFilter === "all" ? true : amountFilter === "expense" ? e.amount < 0 : e.amount > 0)
-    .sort((a, b) => {
-      if (sortOrder === "latest") return b.id - a.id;
-      if (sortOrder === "oldest") return a.id - b.id;
-      if (sortOrder === "high") return Math.abs(b.amount) - Math.abs(a.amount);
-      if (sortOrder === "low") return Math.abs(a.amount) - Math.abs(b.amount);
-      return 0;
-    });
+  const filteredExpenses = expenses.filter(e => {
+    const expenseDate = new Date(e.expenseDate);
+    return (
+      expenseDate.getFullYear() === selected.getFullYear() &&
+      expenseDate.getMonth() === selected.getMonth() &&
+      expenseDate.getDate() === selected.getDate()
+    );
+  });
 
   const totalSpent = allExpenses.reduce((sum, e) => sum + Math.abs(e.amount), 0);
   const totalBudgetNum = trip.totalBudget || 0;
@@ -1373,14 +1389,14 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip }) {
               </div>
             ) : (
               <>
-                {filteredExpenses.map((expense) => (
+                {expenses.map((expense) => (
                   <div key={expense.id} className="expense-item">
                     <div>
-                      <div className="expense-label">{expense.label}</div>
+                      <div className="expense-label">{categoryMap[expense.category] || expense.category}</div>
                       <div className="expense-sub">{expense.memo}</div>
                     </div>
-                    <div className={`expense-amount ${expense.amount < 0 ? "red-text" : "green-text"}`}>
-                      {expense.amount < 0 ? "-" : "+"}{Math.abs(expense.amount).toLocaleString()}
+                    <div className={`expense-amount ${-expense.amount < 0 ? "red-text" : "green-text"}`}>
+                      {-expense.amount < 0 ? "-" : "+"}{Math.abs(expense.amount).toLocaleString()}
                     </div>
                   </div>
                 ))}
@@ -1430,6 +1446,9 @@ export default function App() {
   // ✅ navigate — afterLogin 시 여행 목록 불러오기
   const navigate = async (destination, data) => {
     if (destination === "afterLogin") {
+      if (data && data.name) {
+      handleLogin(data.name); 
+    }
       // 로그인 직후 여행 목록 DB에서 불러오기
       try {
         const res = await getTrips();
@@ -1509,6 +1528,7 @@ export default function App() {
 };
    //여행 수정
   const handleUpdateTrip = async (updatedTrip) => {
+    console.log("budgetData:", updatedTrip.budgetData);
     try {
       const budgets = (updatedTrip.budgetData || [])
         .filter((item) => String(item.amount).trim() !== "" && Number(item.amount) > 0)
@@ -1591,7 +1611,7 @@ export default function App() {
         return <HomeScreen trips={trips} onNavigate={navigate} onSelectTrip={setSelectedTripId}
           onDeleteTrip={handleDeleteTrip} onEditTrip={handleEditTrip} userName={userName} />;
       case "tripDetail":
-        return <TripDetailScreen onNavigate={navigate} trip={selectedTrip} onUpdateTrip={handleUpdateTrip} onDeleteTrip={handleDeleteTrip} />;
+        return <TripDetailScreen onNavigate={navigate} trip={selectedTrip} onUpdateTrip={handleUpdateTrip} onDeleteTrip={handleDeleteTrip} tripId={selectedTripId} />;
       case "tripJournal":
         return <TripJournalScreen onNavigate={navigate} trip={selectedTrip}
           onUpdateTrip={handleUpdateTrip}

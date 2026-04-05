@@ -32,7 +32,7 @@ export const deleteTrip = async (tripId) => {
 
 // 여행별 예산 목록 조회
 export const getTripBudgets = async (tripId) => {
-  const response = await instance.get(`/trips/${tripId}/budgets`);
+  const response = await instance.get(`/budgets/${tripId}`);
   return response.data;
 };
 
