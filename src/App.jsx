@@ -126,6 +126,12 @@ function LoginScreen({ onNavigate, onLogin }) {
                 </span>
             </div>
 
+            <div className="sub-link">
+                <span className="link" onClick={() => onNavigate("changePassword")}>
+                    비밀번호 변경
+                </span>
+            </div>
+
         </div>
     );
 }
@@ -228,6 +234,138 @@ function RegisterScreen({ onNavigate }) {
 
         </div>
     );
+}
+
+function ChangePasswordScreen({ onNavigate }) {
+  const [form, setForm] = useState({
+    email: '',   
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // 새 비밀번호 일치 확인
+    if (form.newPassword !== form.confirmPassword) {
+      alert('새 비밀번호가 일치하지 않습니다.');
+      return;
+    }
+    if (form.newPassword.length < 8) {
+      alert('새 비밀번호는 8자 이상이어야 합니다.');
+      return;
+    }
+
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token'); // 로그인 시 저장한 JWT
+
+    const res = await fetch('http://25.2.109.64:8080/api/users/change-password', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: form.email,    
+        currentPassword: form.currentPassword,
+        newPassword: form.newPassword,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || '비밀번호 변경에 실패했습니다.');
+    }
+
+    alert('비밀번호가 변경되었습니다. 다시 로그인해 주세요.');
+    localStorage.removeItem('token'); // 보안상 토큰 제거
+    onNavigate("login");
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  return (
+    <div className="screen register-screen">
+      <div className="logo-wrapper">
+        <img src="/src/img/logo.png" alt="logo" className="logo" />
+      </div>
+
+      <div className="register-title">비밀번호 변경</div>
+
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <input
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="이메일"
+            required
+            className="input-field"
+          />
+        </div>
+
+        <div className="form-group">
+          <input
+            type="password"
+            name="currentPassword"
+            value={form.currentPassword}
+            onChange={handleChange}
+            placeholder="현재 비밀번호"
+            required
+            className="input-field"
+          />
+        </div>
+        <div className="form-group">
+          <input
+            type="password"
+            name="newPassword"
+            value={form.newPassword}
+            onChange={handleChange}
+            placeholder="새 비밀번호"
+            required
+            className="input-field"
+          />
+          <p className="find-link">8자 이상 입력하세요</p>
+        </div>
+        <div className="form-group">
+          <input
+            type="password"
+            name="confirmPassword"
+            value={form.confirmPassword}
+            onChange={handleChange}
+            placeholder="새 비밀번호 확인"
+            required
+            className="input-field"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="green-btn full-width"
+        >
+          {loading ? '변경 중...' : '비밀번호 변경'}
+        </button>
+      </form>
+
+      <div className="sub-link">
+        <span className="link" onClick={() => onNavigate("login")}>
+          로그인으로 돌아가기
+        </span>
+      </div>
+    </div>
+  );
 }
 
 // ─── 화면 3: 온보딩 ──────────────────────────────────────────────────────────
@@ -1748,6 +1886,7 @@ export default function App() {
     switch (screen) {
       case "login": return <LoginScreen onNavigate={navigate} onLogin={handleLogin} />;
       case "register": return <RegisterScreen onNavigate={navigate} onLogin={handleLogin} />;
+      case "changePassword": return <ChangePasswordScreen onNavigate={navigate} />;
       case "onboarding": return <OnboardingScreen onNavigate={navigate} />;
       case "createTrip":
         return <CreateTripScreen onNavigate={navigate} onAddTrip={handleAddTrip}
