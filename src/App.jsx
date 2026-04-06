@@ -6,8 +6,7 @@ import StatsScreen from "./pages/StatsScreen";
 import TripJournalScreen from "./components/journal/TripJournalScreen";
 import { useAuthStore } from "./store/authStore";
 import { useNavigate, Link } from "react-router-dom";
-import { getTrips, createTrip, updateTrip, deleteTrip, getTripBudgets, createExpense, getExpenses } from "./api/tripApi";
-import { listJournalEntries } from "./api/journalEntries";
+import { getTrips, getTrip, createTrip, updateTrip, deleteTrip, getTripBudgets, createExpense, getExpenses } from "./api/tripApi";
 
 countries.registerLocale(ko);
 
@@ -286,69 +285,6 @@ function resolveTripImage(trip) {
   }
 
   return trip?.coverImage || trip?.randomImage || getRandomImage();
-}
-
-function resolveJournalAttachmentPreview(attachment) {
-  if (!attachment) return "";
-  if (attachment.preview) return attachment.preview;
-
-  const rawPath = attachment.filePath ?? attachment.path ?? attachment.url ?? "";
-  if (!rawPath) return "";
-  if (rawPath.startsWith("http")) return rawPath;
-
-  const normalizedPath = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
-  return `${getBackendOrigin()}${normalizedPath}`;
-}
-
-function extractEntryPreview(entry) {
-  const attachments =
-    entry?.attachments ??
-    entry?.attachmentList ??
-    entry?.journalAttachments ??
-    entry?.images ??
-    [];
-
-  if (!Array.isArray(attachments) || attachments.length === 0) {
-    return "";
-  }
-
-  return resolveJournalAttachmentPreview(attachments[0]);
-}
-
-async function resolveTripCoverImageFromJournal(trip) {
-  const tripDays = buildTripDays(trip).filter((day) => day.isoDate);
-  if (!tripDays.length) return "";
-
-  try {
-    const entriesByDay = await Promise.all(
-      tripDays.map(async (day) => {
-        try {
-          const entries = await listJournalEntries(trip.id, day.isoDate);
-          return entries ?? [];
-        } catch (error) {
-          console.error("Failed to load journal entries for thumbnail:", error);
-          return [];
-        }
-      })
-    );
-
-    const orderedEntries = entriesByDay
-      .flat()
-      .sort(
-        (a, b) =>
-          new Date(a.createdAt ?? a.updatedAt ?? 0).getTime() -
-          new Date(b.createdAt ?? b.updatedAt ?? 0).getTime()
-      );
-
-    for (const entry of orderedEntries) {
-      const preview = extractEntryPreview(entry);
-      if (preview) return preview;
-    }
-  } catch (error) {
-    console.error("Failed to resolve trip cover image:", error);
-  }
-
-  return "";
 }
 
 // ─── 화면 4: 여행 생성 / 수정 ────────────────────────────────────────────────
@@ -1550,17 +1486,8 @@ export default function App() {
             journalEntries: [],
           };
         });
-        const hydratedTrips = await Promise.all(
-          fetched.map(async (trip) => ({
-            ...trip,
-            coverImage: trip.thumbnailPath
-              ? trip.coverImage
-              : await resolveTripCoverImageFromJournal(trip),
-          }))
-        );
-
-        setTrips(hydratedTrips);
-        setScreen(hydratedTrips.length === 0 ? "onboarding" : "home");
+        setTrips(fetched);
+        setScreen(fetched.length === 0 ? "onboarding" : "home");
       } catch (err) {
         console.error("여행 목록 불러오기를 실패했습니다", err);
         setScreen("onboarding");
@@ -1635,6 +1562,29 @@ export default function App() {
       setTrips((prev) =>
         prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
       );
+
+      if (screen === "tripJournal" && updatedTrip?.id) {
+        try {
+          const tripResponse = await getTrip(updatedTrip.id);
+          const refreshedTrip = tripResponse?.data ?? tripResponse;
+
+          if (refreshedTrip) {
+            setTrips((prev) =>
+              prev.map((t) =>
+                t.id === updatedTrip.id
+                  ? {
+                      ...t,
+                      thumbnailPath: refreshedTrip.thumbnailPath ?? null,
+                    }
+                  : t
+              )
+            );
+          }
+        } catch (thumbnailError) {
+          console.error("대표 썸네일 재조회 실패", thumbnailError);
+        }
+      }
+
       if (screen !== "tripJournal") setEditingTrip(null);
     } catch (err) {
       alert("여행 수정에 실패했습니다.");
