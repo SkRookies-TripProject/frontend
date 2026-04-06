@@ -909,7 +909,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
 
   const sendToOcr = async (base64) => {
     try {
-      const response = await fetch("http://25.2.125.100:8080/api/receipt/analyze", {
+      const response = await fetch("http://25.2.109.64:8080/api/receipt/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageBase64: base64 }),
