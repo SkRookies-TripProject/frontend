@@ -665,25 +665,26 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
   const baseExpenses = selectedDate ? dailyExpenses : allExpenses;
 
   useEffect(() => {
-    if (Object.keys(editPrices).length === 0) {
-      const init = {};
-      expenses.forEach(e => {
-        init[e.id] = e.amount;
-      });
-      setEditPrices(init);
-    }
-        
-    const fetchExpenses = async () => {
-      try {
-        const res = await getExpenses(tripId);
-        setExpenses(res.data); // state에 저장
-      } catch (error) {
-        console.error("지출 내역 조회 실패", error);
+  const fetchExpenses = async () => {
+    try {
+      const res = await getExpenses(tripId);
+      const nextExpenses = res.data || [];
+      setExpenses(nextExpenses);
+
+      if (Object.keys(editPrices).length === 0) {
+        const init = {};
+        nextExpenses.forEach((e) => {
+          init[e.id] = e.amount;
+        });
+        setEditPrices(init);
       }
-    };
+    } catch (error) {
+      console.error("지출 내역 조회 실패", error);
+    }
+  };
 
     if (tripId) fetchExpenses();
-  }, [tripId, expenses]);
+  }, [tripId]);
 
   const handleDateSelect = (isoDate) => {
     setSelectedDate(isoDate);
@@ -715,6 +716,27 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
     "SHOPPING": "쇼핑"
   };  
 
+  const groupExpensesByDate = (expenseList = []) => {
+    return expenseList.reduce((acc, expense) => {
+      const dateKey = String(expense.expenseDate).slice(0, 10);
+
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+
+      acc[dateKey].push({
+        id: expense.id,
+        date: dateKey,
+        category: categoryMap[expense.category] || expense.category,
+        label: categoryMap[expense.category] || expense.category,
+        memo: expense.memo || "",
+        amount: -Math.abs(Number(expense.amount || 0)),
+      });
+
+      return acc;
+    }, {});
+  };
+
   const handleDailyItemChange = (index, field, value) =>
     setDailyInputItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
 
@@ -738,36 +760,26 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
             expenseDate: selectedDate,
             memo: item.memo || "",
           };
-          console.log("Payload to send:", payload); // ✅ 여기서 찍어야 함
+          console.log("Payload to send:", payload);
           return createExpense(trip.id, payload);
         })
       );
 
-      // ✅ 2. 성공하면 기존 로직 유지 (UI 반영)
-      const existing = (trip?.dailyExpenses || {})[selectedDate] || [];
-      const nextId = Date.now();
+      // 저장 직후 최신 지출 목록 다시 조회
+      const refreshedExpenses = await getExpenses(tripId);
+      const nextExpenses = refreshedExpenses.data || [];
 
-      const newItems = validItems.map((item, i) => ({
-        id: nextId + i,
-        date: selectedDate,
-        category: item.category,
-        label: item.category,
-        memo: item.memo,
-        amount: -Math.abs(Number(item.amount)),
-      }));
+      // 화면에 바로 반영
+      setExpenses(nextExpenses);
 
+      // 상단 요약/통계 화면에서도 바로 반영되도록 trip.dailyExpenses 동기화
       onUpdateTrip({
         ...trip,
-        dailyExpenses: {
-          ...(trip.dailyExpenses || {}),
-          [selectedDate]: [...existing, ...newItems],
-        },
+        dailyExpenses: groupExpensesByDate(nextExpenses),
       });
-
 
       setIsDailyInputMode(false);
       setDailyInputItems([{ category: "식비", amount: "", memo: "" }]);
-
     } catch (err) {
       console.error(err);
       alert("지출 저장에 실패했습니다.");
