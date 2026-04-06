@@ -5,6 +5,7 @@ import TripDayTabs from "../components/stats/TripDayTabs";
 import CategoryDonutChart from "../components/stats/CategoryDonutChart";
 import StatsLegend from "../components/stats/StatsLegend";
 import MonthlyExpenseCalendar from "../components/stats/MonthlyExpenseCalendar";
+import { useAuthStore } from "../store/authStore";
 import {
   buildTripDays,
   formatDateRange,
@@ -35,6 +36,8 @@ import {
 */
 
 export default function StatsScreen({ onNavigate, trip }) {
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const logout = useAuthStore((state) => state.logout);
   const [selectedDate, setSelectedDate] = useState(null);
 
   /*
@@ -200,7 +203,57 @@ export default function StatsScreen({ onNavigate, trip }) {
           </span>
         </div>
 
-        <span className="menu-icon">☰</span>
+        <div style={{ position: "relative" }}>
+          <span
+            className="menu-icon"
+            style={{ cursor: "pointer" }}
+            onClick={() => setShowHeaderMenu((prev) => !prev)}
+          >
+            ☰
+          </span>
+
+          {showHeaderMenu && (
+            <div
+              style={{
+                position: "absolute",
+                top: "28px",
+                right: 0,
+                width: "120px",
+                background: "#ffffff",
+                border: "1px solid #e5e7eb",
+                borderRadius: "12px",
+                boxShadow: "0 8px 20px rgba(0, 0, 0, 0.08)",
+                overflow: "hidden",
+                zIndex: 100,
+              }}
+            >
+              <div style={{ height: "1px", background: "#e5e7eb" }} />
+              <div
+                style={{
+                  padding: "10px 16px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "13px",
+                  color: "#374151",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                onClick={() => {
+                  if (window.confirm("로그아웃 하시겠습니까?")) {
+                    setShowHeaderMenu(false);
+                    logout();
+                    onNavigate("login");
+                  }
+                }}
+              >
+                ↩ 로그아웃
+              </div>
+            </div>
+          )}
+        </div>
+        
       </div>
 
       <div className="stats-content">
