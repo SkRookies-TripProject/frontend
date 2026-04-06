@@ -1560,18 +1560,11 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
       {/* ⑤ 정렬 / 필터 */}
       <div className="sort-filter-row">
         <select className="sort-select" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
-          <option value="latest">최신순</option>
-          <option value="oldest">오래된순</option>
           <option value="high">금액 높은순</option>
           <option value="low">금액 낮은순</option>
         </select>
         <div className="amount-filter-group">
-          {[{ value: "all", label: "전체" }, { value: "expense", label: "지출" }, { value: "income", label: "수입" }]
-            .map(({ value, label }) => (
-              <button key={value}
-                className={`amount-filter-btn${amountFilter === value ? " active" : ""}`}
-                onClick={() => setAmountFilter(value)}>{label}</button>
-            ))}
+           <div style={{ fontSize: 12, color: "#bbb", marginTop: 4 }}>지출 금액</div>
         </div>
       </div>
 
