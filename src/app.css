@@ -224,7 +224,7 @@
 .edit-form {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 16px 16px;
+  padding: 8px 16px 512px;
 }
 
 .edit-section-label {

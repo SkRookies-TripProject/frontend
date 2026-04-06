@@ -665,6 +665,12 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
   const baseExpenses = selectedDate ? dailyExpenses : allExpenses;
 
   useEffect(() => {
+    const init = {};
+      expenses.forEach(e => {
+        init[e.id] = e.amount;
+      });
+      setEditPrices(init);
+      
     const fetchExpenses = async () => {
       try {
         const res = await getExpenses(tripId);
@@ -675,7 +681,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
     };
 
     if (tripId) fetchExpenses();
-  }, [tripId]);
+  }, [tripId, expenses]);
 
   const handleDateSelect = (isoDate) => {
     setSelectedDate(isoDate);
@@ -800,14 +806,14 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
     return isSameDate && isSameCategory;
   });
 
-  const totalSpent = allExpenses.reduce((sum, e) => sum + Math.abs(e.amount), 0);
+  const totalSpent = expenses.reduce((sum, e) => sum + Math.abs(e.amount), 0);
   const totalBudgetNum = trip.totalBudget || 0;
   const remaining = totalBudgetNum - totalSpent;
 
   const enterEditMode = () => {
     setEditName(trip.name);
     const prices = {};
-    allExpenses.forEach((e) => { prices[e.id] = Math.abs(e.amount).toString(); });
+    expenses.forEach((e) => { prices[e.id] = Math.abs(e.amount).toString(); });
     setEditPrices(prices);
     setIsEditMode(true);
   };
@@ -939,8 +945,8 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
   if (isEditMode) {
     const editTargets = activeCategory === "ALL"
       ? expenses
-      : expenses.filter((e) => e.category === activeCategory);
-      console.log(expenses)
+      : expenses.filter((e) => categoryMap[e.category] === activeCategory);
+
 
     return (
       <div className="screen trip-detail-screen">
@@ -971,10 +977,17 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
                 <div className="edit-expense-row">
                   {/* 라벨 + 날짜 */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <span className="edit-expense-label">{e.label}</span>
-                    {e.date && (
+                    <span className="edit-expense-label">
+                      {categoryMap[e.category] || e.category}
+                    </span>
+
+                    <div className="edit-expense-sub">
+                      {e.memo}
+                    </div>
+
+                    {e.expenseDate && (
                       <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
-                        {e.date.replace(/-/g, ".")}
+                        {e.expenseDate.replace(/-/g, ".")}
                       </div>
                     )}
                   </div>
