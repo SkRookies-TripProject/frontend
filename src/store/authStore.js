@@ -40,18 +40,20 @@ export const useAuthStore = create((set) => ({
     // 페이지 새로고침 후에도 로그인이 유지되는 이유입니다.
     token: localStorage.getItem(TOKEN_KEY) ?? null,
     email: localStorage.getItem(EMAIL_KEY) ?? null,
+    name: localStorage.getItem('auth_name') ?? null, 
     role: localStorage.getItem("auth_role") ?? null,
 
     // ── 로그인 ────────────────────────────────────────────────────────
     // 1. 서버에 이메일/비밀번호 전송 → JWT 토큰 수신
     // 2. localStorage와 스토어 상태 모두 업데이트
     login: async (email, password) => {
-        const { token, role } = await authApi.login(email, password);
+        const { token, name, role } = await authApi.login(email, password);
         localStorage.setItem(TOKEN_KEY, token);
         localStorage.setItem(EMAIL_KEY, email);
+        localStorage.setItem('auth_name', name);
         localStorage.setItem("auth_role", role);
 
-        set({ token, email, role });
+        set({ token, email, name, role });
     },
 
     // ── 회원 가입 ─────────────────────────────────────────────────────
