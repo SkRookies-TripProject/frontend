@@ -6,7 +6,7 @@ import StatsScreen from "./pages/StatsScreen";
 import TripJournalScreen from "./components/journal/TripJournalScreen";
 import { useAuthStore } from "./store/authStore";
 import { useNavigate, Link } from "react-router-dom";
-import { getTrips, createTrip, updateTrip, deleteTrip, getTripBudgets, createExpense, getExpenses } from "./api/tripApi";
+import { getTrips, getTrip, createTrip, updateTrip, deleteTrip, getTripBudgets, createExpense, getExpenses } from "./api/tripApi";
 
 countries.registerLocale(ko);
 
@@ -559,6 +559,16 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
                   src={resolveTripImage(trip)}
                   alt={`${trip.name} 대표 이미지`}
                   className="trip-card-image"
+                  onError={(e) => {
+                    const fallbackImage =
+                      trip.coverImage || trip.randomImage || getRandomImage();
+
+                    if (!fallbackImage || e.currentTarget.src === fallbackImage) {
+                      return;
+                    }
+
+                    e.currentTarget.src = fallbackImage;
+                  }}
                 />
               </div>
               <div className="trip-card-body">
@@ -1573,6 +1583,29 @@ export default function App() {
       setTrips((prev) =>
         prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
       );
+
+      if (screen === "tripJournal" && updatedTrip?.id) {
+        try {
+          const tripResponse = await getTrip(updatedTrip.id);
+          const refreshedTrip = tripResponse?.data ?? tripResponse;
+
+          if (refreshedTrip) {
+            setTrips((prev) =>
+              prev.map((t) =>
+                t.id === updatedTrip.id
+                  ? {
+                      ...t,
+                      thumbnailPath: refreshedTrip.thumbnailPath ?? null,
+                    }
+                  : t
+              )
+            );
+          }
+        } catch (thumbnailError) {
+          console.error("대표 썸네일 재조회 실패", thumbnailError);
+        }
+      }
+
       if (screen !== "tripJournal") setEditingTrip(null);
     } catch (err) {
       alert("여행 수정에 실패했습니다.");

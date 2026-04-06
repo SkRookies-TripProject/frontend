@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getStoredAccessToken } from "../../api/authStorage";
+import { useAuthStore } from "../../store/authStore";
 import {
   createJournalEntry,
   deleteJournalAttachment,
@@ -165,12 +166,38 @@ function hydrateEntry(entry, dayIndex) {
   };
 }
 
+function sortJournalEntries(entries) {
+  return [...(entries ?? [])].sort(
+    (a, b) =>
+      new Date(a.createdAt ?? a.updatedAt ?? 0).getTime() -
+      new Date(b.createdAt ?? b.updatedAt ?? 0).getTime()
+  );
+}
+
+function buildTripJournalEntries(currentEntries, recordDate, nextEntriesForDate) {
+  const otherEntries = (currentEntries ?? []).filter(
+    (entry) => entry.recordDate !== recordDate
+  );
+
+  return sortJournalEntries([...(nextEntriesForDate ?? []), ...otherEntries]);
+}
+
+function resolveCoverImageFromEntries(entries, fallbackImage = "") {
+  for (const entry of entries ?? []) {
+    const preview = entry?.imagePreviews?.[0]?.preview;
+    if (preview) return preview;
+  }
+
+  return fallbackImage;
+}
+
 export default function TripJournalScreen({
   onNavigate,
   trip,
   onUpdateTrip,
   renderButton,
 }) {
+  const { logout } = useAuthStore();
   const [selectedDay, setSelectedDay] = useState(0);
   const [isWriting, setIsWriting] = useState(false);
   const [reviewImages, setReviewImages] = useState([]);
@@ -180,6 +207,7 @@ export default function TripJournalScreen({
   const [deleteEntryId, setDeleteEntryId] = useState(null);
   const [entriesByDay, setEntriesByDay] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
 
   const tripDays = buildTripDays(trip);
   const selectedDayInfo = tripDays[selectedDay] ?? tripDays[0];
@@ -196,6 +224,26 @@ export default function TripJournalScreen({
     );
   const selectedEntry =
     selectedEntries.find((entry) => entry.id === selectedEntryId) ?? null;
+
+  const syncTripJournalState = (nextEntriesForDate) => {
+    if (!onUpdateTrip || !selectedRecordDate) return;
+
+    const journalEntries = buildTripJournalEntries(
+      trip.journalEntries,
+      selectedRecordDate,
+      nextEntriesForDate
+    );
+
+    onUpdateTrip({
+      ...trip,
+      journalEntries,
+      thumbnailPath: null,
+      coverImage: resolveCoverImageFromEntries(
+        journalEntries,
+        trip.randomImage || ""
+      ),
+    });
+  };
 
   // 작성/수정 화면을 닫을 때 입력 상태를 초기화합니다.
   const resetEditor = () => {
@@ -372,6 +420,11 @@ export default function TripJournalScreen({
             entry.id === editingEntryId ? nextEntry : entry
           ),
         }));
+        syncTripJournalState(
+          (reviewEntries ?? []).map((entry) =>
+            entry.id === editingEntryId ? nextEntry : entry
+          )
+        );
 
         resetEditor();
         setSelectedEntryId(editingEntryId);
@@ -388,18 +441,12 @@ export default function TripJournalScreen({
         imagePreviews: [...existingImages, ...uploadedImages],
       };
 
+      const nextEntriesForDate = [nextEntry, ...(reviewEntries ?? [])];
       setEntriesByDay((prev) => ({
         ...prev,
-        [selectedRecordDate]: [nextEntry, ...(prev[selectedRecordDate] ?? [])],
+        [selectedRecordDate]: nextEntriesForDate,
       }));
-
-      if (onUpdateTrip) {
-        onUpdateTrip({
-          ...trip,
-          journalEntries: [nextEntry, ...(trip.journalEntries ?? [])],
-          coverImage: trip.coverImage || nextEntry.imagePreviews?.[0]?.preview || "",
-        });
-      }
+      syncTripJournalState(nextEntriesForDate);
 
       resetEditor();
       setSelectedEntryId(null);
@@ -424,20 +471,48 @@ export default function TripJournalScreen({
         await deleteJournalAttachment(targetImage.attachmentId);
       }
 
+      const nextEntriesForDate = (reviewEntries ?? []).map((entry) =>
+        entry.id === selectedEntry.id
+          ? { ...entry, imagePreviews: nextImagePreviews }
+          : entry
+      );
+
       setEntriesByDay((prev) => ({
         ...prev,
-        [selectedRecordDate]: (prev[selectedRecordDate] ?? []).map((entry) =>
-          entry.id === selectedEntry.id
-            ? { ...entry, imagePreviews: nextImagePreviews }
-            : entry
-        ),
+        [selectedRecordDate]: nextEntriesForDate,
       }));
+      syncTripJournalState(nextEntriesForDate);
     } catch (error) {
       console.error("Failed to delete journal attachment:", error);
     }
   };
 
   // 상세 화면에서 수정 버튼을 누르면 선택한 메모를 편집 상태로 전환합니다.
+  const handleBrokenDetailImage = (imageIndex) => {
+    if (!selectedEntry || !selectedRecordDate) return;
+
+    const nextEntriesForDate = (reviewEntries ?? []).map((entry) =>
+      entry.id === selectedEntry.id
+        ? {
+            ...entry,
+            imagePreviews: (entry.imagePreviews ?? []).filter(
+              (_, index) => index !== imageIndex
+            ),
+          }
+        : entry
+    );
+
+    setEntriesByDay((prev) => ({
+      ...prev,
+      [selectedRecordDate]: nextEntriesForDate,
+    }));
+    syncTripJournalState(nextEntriesForDate);
+  };
+
+  const handleBrokenEditorImage = (imageId) => {
+    setReviewImages((prev) => prev.filter((image) => image.id !== imageId));
+  };
+
   const handleStartEditEntry = () => {
     if (!selectedEntry) return;
 
@@ -470,12 +545,15 @@ export default function TripJournalScreen({
       setIsSubmitting(true);
       await deleteJournalEntry(deleteEntryId);
 
+      const nextEntriesForDate = (reviewEntries ?? []).filter(
+        (entry) => entry.id !== deleteEntryId
+      );
+
       setEntriesByDay((prev) => ({
         ...prev,
-        [selectedRecordDate]: (prev[selectedRecordDate] ?? []).filter(
-          (entry) => entry.id !== deleteEntryId
-        ),
+        [selectedRecordDate]: nextEntriesForDate,
       }));
+      syncTripJournalState(nextEntriesForDate);
 
       if (selectedEntryId === deleteEntryId) {
         setSelectedEntryId(null);
@@ -500,7 +578,55 @@ export default function TripJournalScreen({
             ⌂
           </span>
           <span className="journal-title">{trip.name}(후기)</span>
-          <span className="hamburger">☰</span>
+          <span
+            className="hamburger"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowHeaderMenu((prev) => !prev);
+            }}
+          >
+            ☰
+          </span>
+          {showHeaderMenu && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute",
+                top: 45,
+                right: 0,
+                background: "#fff",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                zIndex: 100,
+                minWidth: "150px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  padding: "10px 16px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "13px",
+                  color: "#374151",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                onClick={() => {
+                  if (window.confirm("로그아웃 하시겠습니까?")) {
+                    setShowHeaderMenu(false);
+                    logout();
+                    onNavigate("login");
+                  }
+                }}
+              >
+                ↩ 로그아웃
+              </div>
+            </div>
+          )}
         </div>
         <div className={`journal-days${isCompactDayTabs ? " compact" : ""}`}>
           {tripDays.map((day, index) => (
@@ -541,6 +667,7 @@ export default function TripJournalScreen({
                         src={image.preview}
                         alt={`후기 이미지 미리보기 ${index + 1}`}
                         className="journal-image-preview"
+                        onError={() => handleBrokenEditorImage(image.id)}
                       />
                     ))}
                   </div>
@@ -591,6 +718,7 @@ export default function TripJournalScreen({
                     src={imagePreview.preview}
                     alt={`기록 이미지 ${index + 1}`}
                     className="journal-entry-detail-image"
+                    onError={() => handleBrokenDetailImage(index)}
                   />
                 </div>
               ))}
@@ -624,13 +752,21 @@ export default function TripJournalScreen({
       ) : selectedEntries.length > 0 ? (
         <div className="journal-entry-list">
           {selectedEntries.map((entry) => (
-            <button
+            <div
               key={entry.id}
-              type="button"
               className="journal-entry-card"
               onClick={() => {
                 setIsWriting(false);
                 setSelectedEntryId(entry.id);
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setIsWriting(false);
+                  setSelectedEntryId(entry.id);
+                }
               }}
             >
               <div className="journal-entry-top">
@@ -652,7 +788,7 @@ export default function TripJournalScreen({
                   삭제
                 </button>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       ) : (
