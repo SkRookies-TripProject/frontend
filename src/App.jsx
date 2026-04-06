@@ -6,7 +6,7 @@ import StatsScreen from "./pages/StatsScreen";
 import TripJournalScreen from "./components/journal/TripJournalScreen";
 import { useAuthStore } from "./store/authStore";
 import { useNavigate, Link } from "react-router-dom";
-import { getTrips, getTrip, createTrip, updateTrip, deleteTrip, getTripBudgets, createExpense, getExpenses } from "./api/tripApi";
+import { updateExpense, deleteExpense, getTrips, getTrip, createTrip, updateTrip, deleteTrip, getTripBudgets, createExpense, getExpenses } from "./api/tripApi";
 
 countries.registerLocale(ko);
 
@@ -665,12 +665,14 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
   const baseExpenses = selectedDate ? dailyExpenses : allExpenses;
 
   useEffect(() => {
-    const init = {};
+    if (Object.keys(editPrices).length === 0) {
+      const init = {};
       expenses.forEach(e => {
         init[e.id] = e.amount;
       });
       setEditPrices(init);
-      
+    }
+        
     const fetchExpenses = async () => {
       try {
         const res = await getExpenses(tripId);
@@ -817,20 +819,6 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
     setEditPrices(prices);
     setIsEditMode(true);
   };
-
-  const handleSave = () => {
-    if (onUpdateTrip) {
-      const nextDailyExpenses = {};
-      Object.entries(trip?.dailyExpenses || {}).forEach(([date, items]) => {
-        nextDailyExpenses[date] = items.map((e) => ({
-          ...e,
-          amount: editPrices[e.id] !== undefined ? -Math.abs(Number(editPrices[e.id])) : e.amount,
-        }));
-      });
-      onUpdateTrip({ ...trip, name: editName, dailyExpenses: nextDailyExpenses });
-    }
-    setIsEditMode(false);
-  };
   
   const handleReceiptClick = (expenseId) => {
     setOcrTargetId(expenseId);
@@ -930,22 +918,60 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
   };
 
   // ★ 수정 모드에서 특정 지출 항목 삭제
-  const handleDeleteExpense = (targetId) => {
-    const nextDailyExpenses = {};
-    Object.entries(trip?.dailyExpenses || {}).forEach(([date, items]) => {
-      const filtered = items.filter((e) => e.id !== targetId);
-      // 해당 날짜에 항목이 남아있을 때만 키 유지
-      if (filtered.length > 0) nextDailyExpenses[date] = filtered;
-    });
-    setEditPrices((prev) => { const next = { ...prev }; delete next[targetId]; return next; });
-    onUpdateTrip({ ...trip, dailyExpenses: nextDailyExpenses });
+  const handleDeleteExpense = async (targetId) => {
+    try {
+      // 1. 서버 삭제
+      await deleteExpense(targetId);
+
+      // 2. UI 즉시 반영
+      setExpenses(prev => prev.filter(e => e.id !== targetId));
+
+      // 3. editPrices도 정리
+      setEditPrices(prev => {
+        const next = { ...prev };
+        delete next[targetId];
+        return next;
+      });
+
+    } catch (err) {
+      console.error("삭제 실패", err);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const updates = Object.entries(editPrices)
+        .filter(([id, amount]) => {
+          const original = expenses.find(e => e.id === Number(id));
+          return original && original.amount !== Number(amount);
+        })
+        .map(([id, amount]) =>
+          updateExpense(id, { amount: Number(amount) })
+        );
+
+      await Promise.all(updates);
+
+      setExpenses(prev =>
+        prev.map(e => ({
+          ...e,
+          amount: Number(editPrices[e.id] ?? e.amount)
+        }))
+      );
+
+      setIsEditMode(false);
+
+    } catch (err) {
+      console.error("수정 실패", err);
+    }
   };
 
   // ── 수정 모드 화면 ─────────────────────────────────────────────────────────
   if (isEditMode) {
     const editTargets = activeCategory === "ALL"
-      ? expenses
-      : expenses.filter((e) => categoryMap[e.category] === activeCategory);
+      ? filteredExpenses
+      : filteredExpenses.filter(
+        (e) => (categoryMap[e.category] || e.category) === activeCategory
+       );
 
 
     return (
@@ -964,7 +990,13 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
             onChange={(e) => setEditName(e.target.value)} />
 
           <div className="edit-section-label" style={{ marginTop: 20 }}>
-            {activeCategory === "ALL" ? "전체" : activeCategory} 카테고리 금액
+            <span>
+              {activeCategory === "ALL" ? "전체" : activeCategory} 카테고리 금액 ✈
+            </span>
+
+            <span style={{ fontSize: 12, color: "#888" }}>
+              {selectedDate}
+            </span>
           </div>
 
           {editTargets.length === 0 ? (
