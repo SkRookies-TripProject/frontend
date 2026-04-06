@@ -938,8 +938,9 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
   // ── 수정 모드 화면 ─────────────────────────────────────────────────────────
   if (isEditMode) {
     const editTargets = activeCategory === "ALL"
-      ? allExpenses
-      : allExpenses.filter((e) => e.category === activeCategory);
+      ? expenses
+      : expenses.filter((e) => e.category === activeCategory);
+      console.log(expenses)
 
     return (
       <div className="screen trip-detail-screen">
