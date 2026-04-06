@@ -376,7 +376,6 @@ function OnboardingScreen({ onNavigate }) {
         <img src="/src/img/logo.png" alt="logo" className="logo" />
       </div>
       <h2 className="onboarding-title">여행을 추가하고<br />예산을 관리해보세요!</h2>
-      <p className="onboarding-sub link" onClick={() => onNavigate("login")}>가이드 바로가기</p>
       <div style={{ flex: 1 }} />
       <GreenButton fullWidth onClick={() => onNavigate("createTrip")}>여행 기록하기</GreenButton>
     </div>
