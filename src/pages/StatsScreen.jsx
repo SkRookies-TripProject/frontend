@@ -138,6 +138,10 @@ export default function StatsScreen({ onNavigate, trip }) {
     return getSpentAmountBySelectedDate(statistics, selectedDate);
   }, [statistics, selectedDate]);
 
+  const remainingBudget = useMemo(() => {
+    return Math.max(0, normalizedBudget.totalBudget - spentAmount);
+  }, [normalizedBudget.totalBudget, spentAmount]);
+
   const stats = useMemo(() => {
     return buildCategoryStatsBySelectedDate(statistics, selectedDate);
   }, [statistics, selectedDate]);
@@ -248,7 +252,7 @@ export default function StatsScreen({ onNavigate, trip }) {
         <BudgetSummary
           totalBudget={normalizedBudget.totalBudget}
           spentAmount={spentAmount}
-          remainingBudget={normalizedBudget.remainingBudget}
+          remainingBudget={remainingBudget}
         />
 
         <div className="stats-date-range-box">
