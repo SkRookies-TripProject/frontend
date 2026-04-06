@@ -771,13 +771,23 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
   }
   const selected = new Date(selectedDate); // 문자열 -> Date
 
+  const expenseDateSet = new Set(
+    expenses.map(e => new Date(e.expenseDate).toDateString())
+  );
+
   const filteredExpenses = expenses.filter(e => {
-    const expenseDate = new Date(e.expenseDate);
-    return (
-      expenseDate.getFullYear() === selected.getFullYear() &&
-      expenseDate.getMonth() === selected.getMonth() &&
-      expenseDate.getDate() === selected.getDate()
-    );
+    const d = new Date(e.expenseDate);
+    const selected = new Date(selectedDate);
+
+    const isSameDate =
+      d.getFullYear() === selected.getFullYear() &&
+      d.getMonth() === selected.getMonth() &&
+      d.getDate() === selected.getDate();
+
+    const isSameCategory =
+      activeCategory === "ALL" || categoryMap[e.category] === activeCategory;
+
+    return isSameDate && isSameCategory;
   });
 
   const totalSpent = allExpenses.reduce((sum, e) => sum + Math.abs(e.amount), 0);
@@ -1263,15 +1273,26 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
       {dateTabs.length > 0 ? (
         <div className="day-tabs">
           {dateTabs.map((day) => {
-            const hasExpense = ((trip?.dailyExpenses || {})[day.isoDate] || []).length > 0;
+            const hasExpense = expenseDateSet.has(new Date(day.isoDate).toDateString());
             return (
-              <div key={day.isoDate}
+              <div
+                key={day.isoDate}
                 className={`day-col${selectedDate === day.isoDate ? " day-col-active" : ""}`}
-                onClick={() => handleDateSelect(day.isoDate)}>
+                onClick={() => handleDateSelect(day.isoDate)}
+              >
                 <div className="day-label">{day.label}</div>
                 <div className="day-num">{day.date}</div>
+
                 {hasExpense && (
-                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#10b981", marginTop: 2 }} />
+                  <div
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: "50%",
+                      background: "#10b981",
+                      marginTop: 2
+                    }}
+                  />
                 )}
               </div>
             );
@@ -1389,7 +1410,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
               </div>
             ) : (
               <>
-                {expenses.map((expense) => (
+                {filteredExpenses.map((expense) => (
                   <div key={expense.id} className="expense-item">
                     <div>
                       <div className="expense-label">{categoryMap[expense.category] || expense.category}</div>
