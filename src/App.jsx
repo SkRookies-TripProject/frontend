@@ -486,7 +486,7 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
   function calcTotalSpent(trip) {
     const expenses = tripExpensesMap?.[trip.id];
 
-    if (!Array.isArray(expenses)) return 0; // ✅ 이거 중요
+    if (!Array.isArray(expenses)) return 0;
 
     return expenses.reduce((sum, e) => {
       return sum + Math.abs(parseInt(e.amount) || 0);
@@ -983,9 +983,16 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
           const original = expenses.find(e => e.id === Number(id));
           return original && original.amount !== Number(amount);
         })
-        .map(([id, amount]) =>
-          updateExpense(id, { amount: Number(amount) })
-        );
+        .map(([id, amount]) => {
+          const original = expenses.find(e => e.id === Number(id));
+
+          return updateExpense(id, {
+            amount: Math.abs(Number(amount) || 0),
+            category: original.category || "",
+            memo: original.memo || "",
+            expenseDate: original.expenseDate || null,
+          });
+        });
 
       await Promise.all(updates);
 
