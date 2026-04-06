@@ -22,6 +22,7 @@ export class AuthApi {
         const { data } = await axios.post('/api/auth/login', { email, password });
         return {
         token: data.data.accessToken, //  accessToken
+        name: data.data.name,
         role: data.data.role
     };
     }

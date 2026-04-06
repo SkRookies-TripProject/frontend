@@ -72,7 +72,8 @@ function LoginScreen({ onNavigate, onLogin }) {
             console.log("로그인 시도");
             await login(email, password);
             alert("로그인에 성공했습니다.");
-            onNavigate("afterLogin");
+            const { name } = useAuthStore.getState();
+            onNavigate("afterLogin", { name });
         } catch (err) {
             console.log("로그인 실패");
             alert(err.message || '로그인에 실패했습니다.');
@@ -631,7 +632,7 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
 const CATEGORIES = ["ALL", "식비", "교통", "숙박", "관광", "쇼핑", "기타"];
 
 // ─── 화면 6: 여행 상세 ───────────────────────────────────────────────────────
-function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId  }) {
+function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId, onEditTrip }) {
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [isEditMode, setIsEditMode] = useState(false);
   const [editName, setEditName] = useState("");
@@ -738,7 +739,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
             expenseDate: selectedDate,
             memo: item.memo || "",
           };
-          console.log("Payload to send:", payload); // ✅ 여기서 찍어야 함
+          console.log("Payload to send:", payload); 
           return createExpense(trip.id, payload);
         })
       );
@@ -1239,7 +1240,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
               onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
               onClick={() => {
                 setShowHeaderMenu(false);
-                onNavigate("editTrip", trip);
+                onEditTrip(trip.id);
               }}
             >
               ✏️ 여행 수정하기
@@ -1711,7 +1712,7 @@ export default function App() {
         return <HomeScreen trips={trips} onNavigate={navigate} onSelectTrip={setSelectedTripId}
           onDeleteTrip={handleDeleteTrip} onEditTrip={handleEditTrip} userName={userName} />;
       case "tripDetail":
-        return <TripDetailScreen onNavigate={navigate} trip={selectedTrip} onUpdateTrip={handleUpdateTrip} onDeleteTrip={handleDeleteTrip} tripId={selectedTripId} />;
+        return <TripDetailScreen onNavigate={navigate} trip={selectedTrip} onUpdateTrip={handleUpdateTrip} onDeleteTrip={handleDeleteTrip} tripId={selectedTripId} onEditTrip={handleEditTrip} />;
       case "tripJournal":
         return <TripJournalScreen onNavigate={navigate} trip={selectedTrip}
           onUpdateTrip={handleUpdateTrip}
