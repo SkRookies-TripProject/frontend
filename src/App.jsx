@@ -44,14 +44,6 @@ function buildTripDays(trip) {
   return days;
 }
 
-// ★ 여행의 전체 실제 지출 합계 계산 헬퍼
-function calcTotalSpent(trip) {
-  if (!trip?.dailyExpenses) return 0;
-  return Object.values(trip.dailyExpenses)
-    .flat()
-    .reduce((sum, e) => sum + Math.abs(e.amount), 0);
-}
-
 // ─── 화면 1: 로그인 ──────────────────────────────────────────────────────────
 const inputClass =
     'w-full px-3 py-2.5 border border-slate-300 rounded-md text-sm bg-white ' +
@@ -462,12 +454,43 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
   const [menuTargetId, setMenuTargetId] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const { logout } = useAuthStore();
+  const [tripExpensesMap, setTripExpensesMap] = useState({});
 
   const handleDeleteConfirm = () => {
     onDeleteTrip(deleteTargetId);
     setDeleteTargetId(null);
     setMenuTargetId(null);
   };
+
+  useEffect(() => {
+    const fetchExpenses = async () => {
+      const map = {};
+
+      for (const trip of trips) {
+        try {
+          const res = await getExpenses(trip.id);
+          map[trip.id] = res.data?.content || res.data || res;
+        } catch (e) {
+          map[trip.id] = [];
+        }
+      }
+
+      setTripExpensesMap(map);
+    };
+
+    if (trips.length > 0) fetchExpenses();
+  }, [trips]);
+
+  // ★ 여행의 전체 실제 지출 합계 계산 헬퍼
+  function calcTotalSpent(trip) {
+    const expenses = tripExpensesMap?.[trip.id];
+
+    if (!Array.isArray(expenses)) return 0; // ✅ 이거 중요
+
+    return expenses.reduce((sum, e) => {
+      return sum + Math.abs(parseInt(e.amount) || 0);
+    }, 0);
+  }
 
   return (
     <div className="screen home-screen"
@@ -550,7 +573,9 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
       <div className="trip-grid">
         {trips.map((trip) => {
           // ★ 실제 지출 합계
-          const spent = calcTotalSpent(trip);
+          const spent = calcTotalSpent(trip, tripExpensesMap);
+          console.log("trip:", trip.id, "spent:", spent);
+
           return (
             <div key={trip.id} className="trip-card"
               onClick={() => { onSelectTrip(trip.id); onNavigate("tripDetail"); }}>
@@ -676,7 +701,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
     const fetchExpenses = async () => {
       try {
         const res = await getExpenses(tripId);
-        setExpenses(res.data); // state에 저장
+        setExpenses(res.data);
       } catch (error) {
         console.error("지출 내역 조회 실패", error);
       }
