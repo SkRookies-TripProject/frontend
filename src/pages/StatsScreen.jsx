@@ -206,26 +206,32 @@ export default function StatsScreen({ onNavigate, trip }) {
           onSelectDate={handleDateClick}
         />
 
-        <div
+      <div
+        style={{
+          padding: "0 20px 8px",
+          justifyContent: "center",
+          alignItems: "center",
+          display: "flex",
+        }}
+      >
+        <button
+          onClick={() => setSelectedDate(null)}
           style={{
-            padding: "0 20px 8px",
-            justifyContent: "center",
-            alignItems: "center",
-            display: "flex",
+            border: "1px solid #d1d5db",
+            background: selectedDate === null ? "#22c55e" : "#ffffff",
+            color: selectedDate === null ? "#ffffff" : "#000000",
+            cursor: "pointer",
+            borderRadius: "9999px",
+            padding: "8px 16px",
+            fontSize: "13px",
+            fontWeight: "700",
+            boxShadow: selectedDate === null ? "0 4px 10px rgba(34, 197, 94, 0.18)" : "none",
+            transition: "all 0.2s ease",
           }}
         >
-          <button
-            onClick={() => setSelectedDate(null)}
-            style={{
-              border: "none",
-              background: "transparent",
-              color: "#22c55e",
-              cursor: "pointer",
-            }}
-          >
-            전체 통계
-          </button>
-        </div>
+          전체 통계
+        </button>
+      </div>
 
         {loading && (
           <p style={{ padding: "0 20px 12px", color: "#888", textAlign: "center" }}>
