@@ -206,6 +206,7 @@ export default function TripJournalScreen({
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [deleteEntryId, setDeleteEntryId] = useState(null);
   const [entriesByDay, setEntriesByDay] = useState({});
+  const [daysWithEntries, setDaysWithEntries] = useState(() => new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
 
@@ -245,6 +246,22 @@ export default function TripJournalScreen({
     });
   };
 
+  const syncDayEntryMarker = (recordDate, nextEntriesForDate) => {
+    if (!recordDate) return;
+
+    setDaysWithEntries((prev) => {
+      const next = new Set(prev);
+
+      if ((nextEntriesForDate ?? []).length > 0) {
+        next.add(recordDate);
+      } else {
+        next.delete(recordDate);
+      }
+
+      return next;
+    });
+  };
+
   // 작성/수정 화면을 닫을 때 입력 상태를 초기화합니다.
   const resetEditor = () => {
     setMemo("");
@@ -260,6 +277,7 @@ export default function TripJournalScreen({
     setDeleteEntryId(null);
     resetEditor();
     setEntriesByDay({});
+    setDaysWithEntries(new Set());
   }, [tripId]);
 
   // 선택한 여행/날짜의 메모 목록을 서버에서 조회합니다.
@@ -283,6 +301,7 @@ export default function TripJournalScreen({
           ...prev,
           [selectedRecordDate]: hydratedEntries,
         }));
+        syncDayEntryMarker(selectedRecordDate, hydratedEntries);
       } catch (error) {
         if (!isMounted) return;
         console.error("Failed to load journal entries:", error);
@@ -295,6 +314,38 @@ export default function TripJournalScreen({
       isMounted = false;
     };
   }, [tripId, selectedRecordDate, selectedDay]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadEntryMarkers() {
+      if (!tripId || !getStoredAccessToken()) {
+        return;
+      }
+
+      try {
+        const loadedEntries = await listJournalEntries(tripId);
+        if (!isMounted) return;
+
+        setDaysWithEntries(
+          new Set(
+            (loadedEntries ?? [])
+              .map((entry) => entry?.recordDate)
+              .filter(Boolean)
+          )
+        );
+      } catch (error) {
+        if (!isMounted) return;
+        console.error("Failed to load journal entry markers:", error);
+      }
+    }
+
+    loadEntryMarkers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [tripId]);
 
   if (!trip) {
     return (
@@ -420,11 +471,11 @@ export default function TripJournalScreen({
             entry.id === editingEntryId ? nextEntry : entry
           ),
         }));
-        syncTripJournalState(
-          (reviewEntries ?? []).map((entry) =>
-            entry.id === editingEntryId ? nextEntry : entry
-          )
+        const nextEntriesForDate = (reviewEntries ?? []).map((entry) =>
+          entry.id === editingEntryId ? nextEntry : entry
         );
+        syncDayEntryMarker(selectedRecordDate, nextEntriesForDate);
+        syncTripJournalState(nextEntriesForDate);
 
         resetEditor();
         setSelectedEntryId(editingEntryId);
@@ -446,6 +497,7 @@ export default function TripJournalScreen({
         ...prev,
         [selectedRecordDate]: nextEntriesForDate,
       }));
+      syncDayEntryMarker(selectedRecordDate, nextEntriesForDate);
       syncTripJournalState(nextEntriesForDate);
 
       resetEditor();
@@ -481,6 +533,7 @@ export default function TripJournalScreen({
         ...prev,
         [selectedRecordDate]: nextEntriesForDate,
       }));
+      syncDayEntryMarker(selectedRecordDate, nextEntriesForDate);
       syncTripJournalState(nextEntriesForDate);
     } catch (error) {
       console.error("Failed to delete journal attachment:", error);
@@ -506,6 +559,7 @@ export default function TripJournalScreen({
       ...prev,
       [selectedRecordDate]: nextEntriesForDate,
     }));
+    syncDayEntryMarker(selectedRecordDate, nextEntriesForDate);
     syncTripJournalState(nextEntriesForDate);
   };
 
@@ -564,6 +618,7 @@ export default function TripJournalScreen({
         ...prev,
         [selectedRecordDate]: nextEntriesForDate,
       }));
+      syncDayEntryMarker(selectedRecordDate, nextEntriesForDate);
       syncTripJournalState(nextEntriesForDate);
 
       if (selectedEntryId === deleteEntryId) {
@@ -640,20 +695,25 @@ export default function TripJournalScreen({
           )}
         </div>
         <div className={`journal-days${isCompactDayTabs ? " compact" : ""}`}>
-          {tripDays.map((day, index) => (
-            <button
-              key={day.isoDate ?? `${day.label}-${day.date}`}
-              className={`journal-day-btn${selectedDay === index ? " active" : ""}`}
-              onClick={() => {
-                setSelectedDay(index);
-                setSelectedEntryId(null);
-                resetEditor();
-              }}
-            >
-              <span className="journal-day-label">{day.label}</span>
-              <span className="journal-day-date">{day.date}</span>
-            </button>
-          ))}
+          {tripDays.map((day, index) => {
+            const hasJournalEntry = daysWithEntries.has(day.isoDate);
+
+            return (
+              <button
+                key={day.isoDate ?? `${day.label}-${day.date}`}
+                className={`journal-day-btn${selectedDay === index ? " active" : ""}`}
+                onClick={() => {
+                  setSelectedDay(index);
+                  setSelectedEntryId(null);
+                  resetEditor();
+                }}
+              >
+                <span className="journal-day-label">{day.label}</span>
+                <span className="journal-day-date">{day.date}</span>
+                {hasJournalEntry ? <span className="journal-day-dot" /> : null}
+              </button>
+            );
+          })}
         </div>
       </div>
 
