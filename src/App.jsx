@@ -6,7 +6,7 @@ import StatsScreen from "./pages/StatsScreen";
 import TripJournalScreen from "./components/journal/TripJournalScreen";
 import { useAuthStore } from "./store/authStore";
 import { useNavigate, Link } from "react-router-dom";
-import { getTrips, createTrip, updateTrip, deleteTrip, getTripBudgets, createExpense, getExpenses } from "./api/tripApi";
+import { updateExpense, deleteExpense, getTrips, getTrip, createTrip, updateTrip, deleteTrip, getTripBudgets, createExpense, getExpenses } from "./api/tripApi";
 
 countries.registerLocale(ko);
 
@@ -560,6 +560,16 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
                   src={resolveTripImage(trip)}
                   alt={`${trip.name} 대표 이미지`}
                   className="trip-card-image"
+                  onError={(e) => {
+                    const fallbackImage =
+                      trip.coverImage || trip.randomImage || getRandomImage();
+
+                    if (!fallbackImage || e.currentTarget.src === fallbackImage) {
+                      return;
+                    }
+
+                    e.currentTarget.src = fallbackImage;
+                  }}
                 />
               </div>
               <div className="trip-card-body">
@@ -656,6 +666,14 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
   const baseExpenses = selectedDate ? dailyExpenses : allExpenses;
 
   useEffect(() => {
+    if (Object.keys(editPrices).length === 0) {
+      const init = {};
+      expenses.forEach(e => {
+        init[e.id] = e.amount;
+      });
+      setEditPrices(init);
+    }
+        
     const fetchExpenses = async () => {
       try {
         const res = await getExpenses(tripId);
@@ -666,7 +684,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
     };
 
     if (tripId) fetchExpenses();
-  }, [tripId]);
+  }, [tripId, expenses]);
 
   const handleDateSelect = (isoDate) => {
     setSelectedDate(isoDate);
@@ -772,39 +790,35 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
   }
   const selected = new Date(selectedDate); // 문자열 -> Date
 
+  const expenseDateSet = new Set(
+    expenses.map(e => new Date(e.expenseDate).toDateString())
+  );
+
   const filteredExpenses = expenses.filter(e => {
-    const expenseDate = new Date(e.expenseDate);
-    return (
-      expenseDate.getFullYear() === selected.getFullYear() &&
-      expenseDate.getMonth() === selected.getMonth() &&
-      expenseDate.getDate() === selected.getDate()
-    );
+    const d = new Date(e.expenseDate);
+    const selected = new Date(selectedDate);
+
+    const isSameDate =
+      d.getFullYear() === selected.getFullYear() &&
+      d.getMonth() === selected.getMonth() &&
+      d.getDate() === selected.getDate();
+
+    const isSameCategory =
+      activeCategory === "ALL" || categoryMap[e.category] === activeCategory;
+
+    return isSameDate && isSameCategory;
   });
 
-  const totalSpent = allExpenses.reduce((sum, e) => sum + Math.abs(e.amount), 0);
+  const totalSpent = expenses.reduce((sum, e) => sum + Math.abs(e.amount), 0);
   const totalBudgetNum = trip.totalBudget || 0;
   const remaining = totalBudgetNum - totalSpent;
 
   const enterEditMode = () => {
     setEditName(trip.name);
     const prices = {};
-    allExpenses.forEach((e) => { prices[e.id] = Math.abs(e.amount).toString(); });
+    expenses.forEach((e) => { prices[e.id] = Math.abs(e.amount).toString(); });
     setEditPrices(prices);
     setIsEditMode(true);
-  };
-
-  const handleSave = () => {
-    if (onUpdateTrip) {
-      const nextDailyExpenses = {};
-      Object.entries(trip?.dailyExpenses || {}).forEach(([date, items]) => {
-        nextDailyExpenses[date] = items.map((e) => ({
-          ...e,
-          amount: editPrices[e.id] !== undefined ? -Math.abs(Number(editPrices[e.id])) : e.amount,
-        }));
-      });
-      onUpdateTrip({ ...trip, name: editName, dailyExpenses: nextDailyExpenses });
-    }
-    setIsEditMode(false);
   };
   
   const handleReceiptClick = (expenseId) => {
@@ -905,22 +919,61 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
   };
 
   // ★ 수정 모드에서 특정 지출 항목 삭제
-  const handleDeleteExpense = (targetId) => {
-    const nextDailyExpenses = {};
-    Object.entries(trip?.dailyExpenses || {}).forEach(([date, items]) => {
-      const filtered = items.filter((e) => e.id !== targetId);
-      // 해당 날짜에 항목이 남아있을 때만 키 유지
-      if (filtered.length > 0) nextDailyExpenses[date] = filtered;
-    });
-    setEditPrices((prev) => { const next = { ...prev }; delete next[targetId]; return next; });
-    onUpdateTrip({ ...trip, dailyExpenses: nextDailyExpenses });
+  const handleDeleteExpense = async (targetId) => {
+    try {
+      // 1. 서버 삭제
+      await deleteExpense(targetId);
+
+      // 2. UI 즉시 반영
+      setExpenses(prev => prev.filter(e => e.id !== targetId));
+
+      // 3. editPrices도 정리
+      setEditPrices(prev => {
+        const next = { ...prev };
+        delete next[targetId];
+        return next;
+      });
+
+    } catch (err) {
+      console.error("삭제 실패", err);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const updates = Object.entries(editPrices)
+        .filter(([id, amount]) => {
+          const original = expenses.find(e => e.id === Number(id));
+          return original && original.amount !== Number(amount);
+        })
+        .map(([id, amount]) =>
+          updateExpense(id, { amount: Number(amount) })
+        );
+
+      await Promise.all(updates);
+
+      setExpenses(prev =>
+        prev.map(e => ({
+          ...e,
+          amount: Number(editPrices[e.id] ?? e.amount)
+        }))
+      );
+
+      setIsEditMode(false);
+
+    } catch (err) {
+      console.error("수정 실패", err);
+    }
   };
 
   // ── 수정 모드 화면 ─────────────────────────────────────────────────────────
   if (isEditMode) {
     const editTargets = activeCategory === "ALL"
-      ? allExpenses
-      : allExpenses.filter((e) => e.category === activeCategory);
+      ? filteredExpenses
+      : filteredExpenses.filter(
+        (e) => (categoryMap[e.category] || e.category) === activeCategory
+       );
+
 
     return (
       <div className="screen trip-detail-screen">
@@ -938,7 +991,13 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
             onChange={(e) => setEditName(e.target.value)} />
 
           <div className="edit-section-label" style={{ marginTop: 20 }}>
-            {activeCategory === "ALL" ? "전체" : activeCategory} 카테고리 금액
+            <span>
+              {activeCategory === "ALL" ? "전체" : activeCategory} 카테고리 금액 ✈
+            </span>
+
+            <span style={{ fontSize: 12, color: "#888" }}>
+              {selectedDate}
+            </span>
           </div>
 
           {editTargets.length === 0 ? (
@@ -951,10 +1010,17 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
                 <div className="edit-expense-row">
                   {/* 라벨 + 날짜 */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <span className="edit-expense-label">{e.label}</span>
-                    {e.date && (
+                    <span className="edit-expense-label">
+                      {categoryMap[e.category] || e.category}
+                    </span>
+
+                    <div className="edit-expense-sub">
+                      {e.memo}
+                    </div>
+
+                    {e.expenseDate && (
                       <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
-                        {e.date.replace(/-/g, ".")}
+                        {e.expenseDate.replace(/-/g, ".")}
                       </div>
                     )}
                   </div>
@@ -1264,15 +1330,26 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
       {dateTabs.length > 0 ? (
         <div className="day-tabs">
           {dateTabs.map((day) => {
-            const hasExpense = ((trip?.dailyExpenses || {})[day.isoDate] || []).length > 0;
+            const hasExpense = expenseDateSet.has(new Date(day.isoDate).toDateString());
             return (
-              <div key={day.isoDate}
+              <div
+                key={day.isoDate}
                 className={`day-col${selectedDate === day.isoDate ? " day-col-active" : ""}`}
-                onClick={() => handleDateSelect(day.isoDate)}>
+                onClick={() => handleDateSelect(day.isoDate)}
+              >
                 <div className="day-label">{day.label}</div>
                 <div className="day-num">{day.date}</div>
+
                 {hasExpense && (
-                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#10b981", marginTop: 2 }} />
+                  <div
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: "50%",
+                      background: "#10b981",
+                      marginTop: 2
+                    }}
+                  />
                 )}
               </div>
             );
@@ -1390,7 +1467,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
               </div>
             ) : (
               <>
-                {expenses.map((expense) => (
+                {filteredExpenses.map((expense) => (
                   <div key={expense.id} className="expense-item">
                     <div>
                       <div className="expense-label">{categoryMap[expense.category] || expense.category}</div>
@@ -1553,6 +1630,29 @@ export default function App() {
       setTrips((prev) =>
         prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t))
       );
+
+      if (screen === "tripJournal" && updatedTrip?.id) {
+        try {
+          const tripResponse = await getTrip(updatedTrip.id);
+          const refreshedTrip = tripResponse?.data ?? tripResponse;
+
+          if (refreshedTrip) {
+            setTrips((prev) =>
+              prev.map((t) =>
+                t.id === updatedTrip.id
+                  ? {
+                      ...t,
+                      thumbnailPath: refreshedTrip.thumbnailPath ?? null,
+                    }
+                  : t
+              )
+            );
+          }
+        } catch (thumbnailError) {
+          console.error("대표 썸네일 재조회 실패", thumbnailError);
+        }
+      }
+
       if (screen !== "tripJournal") setEditingTrip(null);
     } catch (err) {
       alert("여행 수정에 실패했습니다.");

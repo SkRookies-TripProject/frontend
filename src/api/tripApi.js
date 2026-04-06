@@ -52,13 +52,13 @@ export const getExpenses = async (tripId, params = {}) => {
 };
 
 // 실제 지출 내역 수정
-//export const updateExpense = async (expenseId, expenseId) => {
-//  const response = await instance.put(`/expenses/${expenseId}`, expenseId);
-//  return response.data;
-//};
+export const updateExpense = async (expenseId, expenseData) => {
+  const response = await instance.put(`/expenses/${expenseId}`, expenseData);
+  return response.data;
+};
 
 // 실제 지출 내역 삭제
-//export const deleteExpense = async (expenseId) => {
-//  const response = await instance.delete(`/expenses/${expenseId}`);
-//  return response.data;
-//};
+export const deleteExpense = async (expenseId) => {
+  const response = await instance.delete(`/expenses/${expenseId}`);
+  return response.data;
+};

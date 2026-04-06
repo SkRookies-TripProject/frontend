@@ -27,8 +27,10 @@ export default function CategoryDonutChart({ stats = [] }) {
   const radius = (size - strokeWidth) / 2;
   const center = size / 2;
 
+  const visibleStats = stats.filter((item) => Number(item.amount) > 0);
+
   let currentAngle = 0;
-  const total = stats.reduce((sum, item) => sum + item.amount, 0);
+  const total = visibleStats.reduce((sum, item) => sum + item.amount, 0);
 
   return (
     <div className="donut-wrapper">
@@ -47,11 +49,25 @@ export default function CategoryDonutChart({ stats = [] }) {
           strokeWidth={strokeWidth}
         />
 
-        {stats.map((item) => {
+        {visibleStats.map((item) => {
           const angle = total === 0 ? 0 : (item.amount / total) * 360;
           const startAngle = currentAngle;
           const endAngle = currentAngle + angle;
           currentAngle = endAngle;
+
+          if (angle >= 360) {
+            return (
+              <circle
+                key={item.label}
+                cx={center}
+                cy={center}
+                r={radius}
+                fill="none"
+                stroke={item.color}
+                strokeWidth={strokeWidth}
+              />
+            );
+          }
 
           return (
             <path
