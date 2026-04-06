@@ -790,14 +790,14 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
     return isSameDate && isSameCategory;
   });
 
-  const totalSpent = expense.reduce((sum, e) => sum + Math.abs(e.amount), 0);
+  const totalSpent = allExpenses.reduce((sum, e) => sum + Math.abs(e.amount), 0);
   const totalBudgetNum = trip.totalBudget || 0;
   const remaining = totalBudgetNum - totalSpent;
 
   const enterEditMode = () => {
     setEditName(trip.name);
     const prices = {};
-    expense.forEach((e) => { prices[e.id] = Math.abs(e.amount).toString(); });
+    allExpenses.forEach((e) => { prices[e.id] = Math.abs(e.amount).toString(); });
     setEditPrices(prices);
     setIsEditMode(true);
   };
@@ -928,8 +928,8 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
   // ── 수정 모드 화면 ─────────────────────────────────────────────────────────
   if (isEditMode) {
     const editTargets = activeCategory === "ALL"
-      ? expenses
-      : expenses.filter((e) => e.category === activeCategory);
+      ? allExpenses
+      : allExpenses.filter((e) => e.category === activeCategory);
 
     return (
       <div className="screen trip-detail-screen">
