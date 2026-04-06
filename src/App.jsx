@@ -44,14 +44,6 @@ function buildTripDays(trip) {
   return days;
 }
 
-// ★ 여행의 전체 실제 지출 합계 계산 헬퍼
-function calcTotalSpent(trip) {
-  if (!trip?.dailyExpenses) return 0;
-  return Object.values(trip.dailyExpenses)
-    .flat()
-    .reduce((sum, e) => sum + Math.abs(e.amount), 0);
-}
-
 // ─── 화면 1: 로그인 ──────────────────────────────────────────────────────────
 const inputClass =
     'w-full px-3 py-2.5 border border-slate-300 rounded-md text-sm bg-white ' +
@@ -463,12 +455,43 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
   const [menuTargetId, setMenuTargetId] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const { logout } = useAuthStore();
+  const [tripExpensesMap, setTripExpensesMap] = useState({});
 
   const handleDeleteConfirm = () => {
     onDeleteTrip(deleteTargetId);
     setDeleteTargetId(null);
     setMenuTargetId(null);
   };
+
+  useEffect(() => {
+    const fetchExpenses = async () => {
+      const map = {};
+
+      for (const trip of trips) {
+        try {
+          const res = await getExpenses(trip.id);
+          map[trip.id] = res.data?.content || res.data || res;
+        } catch (e) {
+          map[trip.id] = [];
+        }
+      }
+
+      setTripExpensesMap(map);
+    };
+
+    if (trips.length > 0) fetchExpenses();
+  }, [trips]);
+
+  // ★ 여행의 전체 실제 지출 합계 계산 헬퍼
+  function calcTotalSpent(trip) {
+    const expenses = tripExpensesMap?.[trip.id];
+
+    if (!Array.isArray(expenses)) return 0;
+
+    return expenses.reduce((sum, e) => {
+      return sum + Math.abs(parseInt(e.amount) || 0);
+    }, 0);
+  }
 
   return (
     <div className="screen home-screen"
@@ -551,7 +574,9 @@ function HomeScreen({ trips, onNavigate, onSelectTrip, onDeleteTrip, onEditTrip,
       <div className="trip-grid">
         {trips.map((trip) => {
           // ★ 실제 지출 합계
-          const spent = calcTotalSpent(trip);
+          const spent = calcTotalSpent(trip, tripExpensesMap);
+          console.log("trip:", trip.id, "spent:", spent);
+
           return (
             <div key={trip.id} className="trip-card"
               onClick={() => { onSelectTrip(trip.id); onNavigate("tripDetail"); }}>
@@ -666,25 +691,26 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
   const baseExpenses = selectedDate ? dailyExpenses : allExpenses;
 
   useEffect(() => {
-    if (Object.keys(editPrices).length === 0) {
-      const init = {};
-      expenses.forEach(e => {
-        init[e.id] = e.amount;
-      });
-      setEditPrices(init);
-    }
-        
-    const fetchExpenses = async () => {
-      try {
-        const res = await getExpenses(tripId);
-        setExpenses(res.data); // state에 저장
-      } catch (error) {
-        console.error("지출 내역 조회 실패", error);
+  const fetchExpenses = async () => {
+    try {
+      const res = await getExpenses(tripId);
+      const nextExpenses = res.data || [];
+      setExpenses(nextExpenses);
+
+      if (Object.keys(editPrices).length === 0) {
+        const init = {};
+        nextExpenses.forEach((e) => {
+          init[e.id] = e.amount;
+        });
+        setEditPrices(init);
       }
-    };
+    } catch (error) {
+      console.error("지출 내역 조회 실패", error);
+    }
+  };
 
     if (tripId) fetchExpenses();
-  }, [tripId, expenses]);
+  }, [tripId]);
 
   const handleDateSelect = (isoDate) => {
     setSelectedDate(isoDate);
@@ -716,6 +742,27 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
     "SHOPPING": "쇼핑"
   };  
 
+  const groupExpensesByDate = (expenseList = []) => {
+    return expenseList.reduce((acc, expense) => {
+      const dateKey = String(expense.expenseDate).slice(0, 10);
+
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+
+      acc[dateKey].push({
+        id: expense.id,
+        date: dateKey,
+        category: categoryMap[expense.category] || expense.category,
+        label: categoryMap[expense.category] || expense.category,
+        memo: expense.memo || "",
+        amount: -Math.abs(Number(expense.amount || 0)),
+      });
+
+      return acc;
+    }, {});
+  };
+
   const handleDailyItemChange = (index, field, value) =>
     setDailyInputItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
 
@@ -744,31 +791,21 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
         })
       );
 
-      // ✅ 2. 성공하면 기존 로직 유지 (UI 반영)
-      const existing = (trip?.dailyExpenses || {})[selectedDate] || [];
-      const nextId = Date.now();
+      // 저장 직후 최신 지출 목록 다시 조회
+      const refreshedExpenses = await getExpenses(tripId);
+      const nextExpenses = refreshedExpenses.data || [];
 
-      const newItems = validItems.map((item, i) => ({
-        id: nextId + i,
-        date: selectedDate,
-        category: item.category,
-        label: item.category,
-        memo: item.memo,
-        amount: -Math.abs(Number(item.amount)),
-      }));
+      // 화면에 바로 반영
+      setExpenses(nextExpenses);
 
+      // 상단 요약/통계 화면에서도 바로 반영되도록 trip.dailyExpenses 동기화
       onUpdateTrip({
         ...trip,
-        dailyExpenses: {
-          ...(trip.dailyExpenses || {}),
-          [selectedDate]: [...existing, ...newItems],
-        },
+        dailyExpenses: groupExpensesByDate(nextExpenses),
       });
-
 
       setIsDailyInputMode(false);
       setDailyInputItems([{ category: "식비", amount: "", memo: "" }]);
-
     } catch (err) {
       console.error(err);
       alert("지출 저장에 실패했습니다.");
@@ -872,7 +909,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
 
   const sendToOcr = async (base64) => {
     try {
-      const response = await fetch("http://25.2.125.100:8080/api/receipt/analyze", {
+      const response = await fetch("http://25.2.109.64:8080/api/receipt/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageBase64: base64 }),
@@ -946,9 +983,16 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
           const original = expenses.find(e => e.id === Number(id));
           return original && original.amount !== Number(amount);
         })
-        .map(([id, amount]) =>
-          updateExpense(id, { amount: Number(amount) })
-        );
+        .map(([id, amount]) => {
+          const original = expenses.find(e => e.id === Number(id));
+
+          return updateExpense(id, {
+            amount: Math.abs(Number(amount) || 0),
+            category: original.category || "",
+            memo: original.memo || "",
+            expenseDate: original.expenseDate || null,
+          });
+        });
 
       await Promise.all(updates);
 
