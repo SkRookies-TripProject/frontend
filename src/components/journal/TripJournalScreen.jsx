@@ -513,6 +513,17 @@ export default function TripJournalScreen({
     setReviewImages((prev) => prev.filter((image) => image.id !== imageId));
   };
 
+  const handleRemoveEditorImage = (imageId) => {
+    setReviewImages((prev) => {
+      const targetImage = prev.find((image) => image.id === imageId);
+      if (targetImage?.file && targetImage.preview?.startsWith("blob:")) {
+        URL.revokeObjectURL(targetImage.preview);
+      }
+
+      return prev.filter((image) => image.id !== imageId);
+    });
+  };
+
   const handleStartEditEntry = () => {
     if (!selectedEntry) return;
 
@@ -662,13 +673,25 @@ export default function TripJournalScreen({
                 <div className="journal-image-preview-wrap">
                   <div className="journal-image-preview-list">
                     {reviewImages.map((image, index) => (
-                      <img
-                        key={image.id}
-                        src={image.preview}
-                        alt={`후기 이미지 미리보기 ${index + 1}`}
-                        className="journal-image-preview"
-                        onError={() => handleBrokenEditorImage(image.id)}
-                      />
+                      <div key={image.id} className="journal-image-preview-card">
+                        <button
+                          type="button"
+                          className="journal-image-preview-delete"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleRemoveEditorImage(image.id);
+                          }}
+                        >
+                          x
+                        </button>
+                        <img
+                          src={image.preview}
+                          alt={`후기 이미지 미리보기 ${index + 1}`}
+                          className="journal-image-preview"
+                          onError={() => handleBrokenEditorImage(image.id)}
+                        />
+                      </div>
                     ))}
                   </div>
                   <span className="journal-image-change">+ 이미지 추가</span>
