@@ -807,7 +807,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [sortOrder, setSortOrder] = useState("latest");
+  const [sortOrder, setSortOrder] = useState("high");
   const [amountFilter, setAmountFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState(trip?.startDate ?? null);
   const [isDailyInputMode, setIsDailyInputMode] = useState(false);
@@ -832,22 +832,32 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
     try {
       const res = await getExpenses(tripId);
       const nextExpenses = res.data || [];
-      setExpenses(nextExpenses);
+      
+    // sortOrder에 맞게 정렬
+      const sortedExpenses = [...nextExpenses];
+      if (sortOrder === "high") {
+        sortedExpenses.sort((a, b) => b.amount - a.amount); // 금액 높은 순
+      } else if (sortOrder === "low") {
+        sortedExpenses.sort((a, b) => a.amount - b.amount); // 금액 낮은 순
+      }
 
+      setExpenses(sortedExpenses);
+
+      // 편집 가격 초기화 (초기값 설정)
       if (Object.keys(editPrices).length === 0) {
         const init = {};
-        nextExpenses.forEach((e) => {
+        sortedExpenses.forEach((e) => {
           init[e.id] = e.amount;
         });
         setEditPrices(init);
       }
-    } catch (error) {
+      }catch (error) {
       console.error("지출 내역 조회 실패", error);
-    }
-  };
+      }
+    };
 
-    if (tripId) fetchExpenses();
-  }, [tripId]);
+    fetchExpenses();
+  }, [sortOrder]);
 
   const handleDateSelect = (isoDate) => {
     setSelectedDate(isoDate);
@@ -1563,7 +1573,7 @@ function TripDetailScreen({ onNavigate, trip, onUpdateTrip, onDeleteTrip, tripId
           <option value="low">금액 낮은순</option>
         </select>
         <div className="amount-filter-group">
-           <div style={{ fontSize: 12, color: "#bbb", marginTop: 4 }}>지출 금액</div>
+          <div style={{ fontSize: 12, color: "#bbb", marginTop: 4 }}>지출 금액</div>
         </div>
       </div>
 
